@@ -3,6 +3,8 @@ import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
 const MODEL_URL = '/mediapipe/models/hand_landmarker.task';
 const WASM_URL = '/mediapipe/wasm';
+const DETECTION_INTERVAL_MS = 50;
+const POINT_HOLD_MS = 220;
 
 async function createHandLandmarker(vision, delegate) {
   return HandLandmarker.createFromOptions(vision, {
@@ -23,8 +25,13 @@ export default function useHandTracking(videoRef, active) {
   const streamRef = useRef(null);
   const frameRef = useRef(0);
   const lastVideoTimeRef = useRef(-1);
+  const lastDetectionTimeRef = useRef(0);
+  const lastHandSeenTimeRef = useRef(0);
+  const hasHandRef = useRef(false);
   const handPointRef = useRef(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const [hasSeenHand, setHasSeenHand] = useState(false);
+  const [isHandVisible, setIsHandVisible] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -37,11 +44,15 @@ export default function useHandTracking(videoRef, active) {
 
       try {
         setError('');
+        setHasSeenHand(false);
+        setIsHandVisible(false);
+        hasHandRef.current = false;
+        handPointRef.current = null;
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 60, min: 30 },
+            width: { ideal: 424, max: 640 },
+            height: { ideal: 240, max: 480 },
+            frameRate: { ideal: 24, max: 24 },
             facingMode: 'user',
           },
           audio: false,
@@ -62,10 +73,10 @@ export default function useHandTracking(videoRef, active) {
           const vision = await FilesetResolver.forVisionTasks(WASM_URL);
 
           try {
-            landmarkerRef.current = await createHandLandmarker(vision, 'GPU');
-          } catch (gpuError) {
-            console.warn('MediaPipe GPU no disponible, usando CPU.', gpuError);
             landmarkerRef.current = await createHandLandmarker(vision, 'CPU');
+          } catch (cpuError) {
+            console.warn('MediaPipe CPU no disponible, usando GPU.', cpuError);
+            landmarkerRef.current = await createHandLandmarker(vision, 'GPU');
           }
         }
 
@@ -75,18 +86,45 @@ export default function useHandTracking(videoRef, active) {
           }
 
           const currentVideo = videoRef.current;
-          if (currentVideo.readyState >= 2 && currentVideo.currentTime !== lastVideoTimeRef.current) {
+          const shouldDetect = performance.now() - lastDetectionTimeRef.current >= DETECTION_INTERVAL_MS;
+
+          if (
+            shouldDetect
+            && currentVideo.readyState >= 2
+            && currentVideo.videoWidth > 0
+            && currentVideo.currentTime !== lastVideoTimeRef.current
+          ) {
+            lastDetectionTimeRef.current = performance.now();
             lastVideoTimeRef.current = currentVideo.currentTime;
-            const result = landmarkerRef.current.detectForVideo(currentVideo, performance.now());
+            const now = performance.now();
+            let result;
+
+            try {
+              result = landmarkerRef.current.detectForVideo(currentVideo, now);
+            } catch {
+              frameRef.current = requestAnimationFrame(detect);
+              return;
+            }
+
             const indexTip = result.landmarks?.[0]?.[8];
 
             if (indexTip) {
+              lastHandSeenTimeRef.current = now;
               handPointRef.current = {
                 x: 1 - indexTip.x,
                 y: indexTip.y,
               };
-            } else {
+              if (!hasHandRef.current) {
+                hasHandRef.current = true;
+                setIsHandVisible(true);
+              }
+              setHasSeenHand(true);
+            } else if (now - lastHandSeenTimeRef.current > POINT_HOLD_MS) {
               handPointRef.current = null;
+              if (hasHandRef.current) {
+                hasHandRef.current = false;
+                setIsHandVisible(false);
+              }
             }
           }
 
@@ -124,9 +162,12 @@ export default function useHandTracking(videoRef, active) {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
       handPointRef.current = null;
+      hasHandRef.current = false;
+      setHasSeenHand(false);
+      setIsHandVisible(false);
       setIsCameraReady(false);
     };
   }, [active, videoRef]);
 
-  return { handPointRef, isCameraReady, error };
+  return { handPointRef, isCameraReady, hasSeenHand, isHandVisible, error };
 }

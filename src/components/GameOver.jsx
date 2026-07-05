@@ -1,6 +1,17 @@
-import { RotateCcw } from 'lucide-react';
+import { Home, RotateCcw } from 'lucide-react';
+import RankingBoard from './RankingBoard.jsx';
 
-export default function GameOver({ score, record, totalFruits = 0, type = 'gameover', onRestart }) {
+export default function GameOver({
+  score,
+  record,
+  totalFruits = 0,
+  type = 'gameover',
+  rankings,
+  inputMode,
+  onClearRanking,
+  onRestart,
+  onHome,
+}) {
   const isVictory = type === 'victory';
 
   return (
@@ -13,10 +24,17 @@ export default function GameOver({ score, record, totalFruits = 0, type = 'gameo
           <span>FRUTAS: {totalFruits}</span>
           <span>RECORD: {String(record).padStart(4, '0')}</span>
         </div>
-        <button className="primary-button" type="button" onClick={onRestart}>
-          <RotateCcw size={22} />
-          JUGAR DE NUEVO
-        </button>
+        <div className="end-actions">
+          <button className="primary-button" type="button" onClick={onRestart}>
+            <RotateCcw size={22} />
+            JUGAR DE NUEVO
+          </button>
+          <button className="secondary-button" type="button" onClick={onHome}>
+            <Home size={22} />
+            INICIO
+          </button>
+        </div>
+        <RankingBoard rankings={rankings} activeMode={inputMode} onClear={onClearRanking} />
       </div>
     </section>
   );

@@ -5,8 +5,8 @@ import { getLevelConfig, MAX_LEVEL } from '../services/levels.js';
 import { createSwordState, drawSword, SWORD_CONFIG, updateSword } from '../services/sword.js';
 
 const GRAVITY = 0.22;
-const MAX_PARTICLES = 120;
-const MAX_HALVES = 44;
+const MAX_PARTICLES = 80;
+const MAX_HALVES = 32;
 const SOUNDS = {
   slice: '/src/assets/sounds/slice.mp3',
   explosion: '/src/assets/sounds/explosion.mp3',
@@ -233,8 +233,11 @@ function drawSlashes(ctx, slashes) {
 }
 
 export default function GameCanvas({
-  handPointRef,
-  isCameraReady,
+  inputPointRef,
+  inputMode,
+  isInputReady,
+  inputStatus,
+  paused,
   onScore,
   onLoseLife,
   onGameOver,
@@ -249,9 +252,12 @@ export default function GameCanvas({
   const particlesRef = useRef([]);
   const trailRef = useRef([]);
   const slashesRef = useRef([]);
+  const mousePointRef = useRef(null);
   const swordRef = useRef(createSwordState());
   const swordImageRef = useRef(null);
-  const cameraReadyRef = useRef(isCameraReady);
+  const inputReadyRef = useRef(isInputReady);
+  const inputModeRef = useRef(inputMode);
+  const pausedRef = useRef(paused);
   const lastSpawnRef = useRef(0);
   const scoreRef = useRef(0);
   const lostLivesRef = useRef(0);
@@ -267,8 +273,19 @@ export default function GameCanvas({
   }, [onGameOver, onLevelStats, onLoseLife, onScore, onVictory]);
 
   useEffect(() => {
-    cameraReadyRef.current = isCameraReady;
-  }, [isCameraReady]);
+    inputReadyRef.current = isInputReady;
+  }, [isInputReady]);
+
+  useEffect(() => {
+    inputModeRef.current = inputMode;
+    if (inputMode !== 'mouse') {
+      mousePointRef.current = null;
+    }
+  }, [inputMode]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     const image = new Image();
@@ -359,12 +376,45 @@ export default function GameCanvas({
       ctx.fillStyle = 'rgba(3, 7, 14, 0.22)';
       ctx.fillRect(0, 0, width, height);
 
+      if (pausedRef.current) {
+        fruitsRef.current.forEach((fruit) => drawFruit(ctx, fruit));
+        halvesRef.current.forEach((half) => drawHalf(ctx, half));
+        drawParticles(ctx, particlesRef.current);
+        drawSlashes(ctx, slashesRef.current);
+        drawTrail(ctx, trailRef.current);
+        drawSword(ctx, swordRef.current, swordImageRef.current, width);
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.52)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 44px Inter, system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSA', width / 2, height / 2);
+        ctx.restore();
+        animationRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      if (!inputReadyRef.current) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 22px Inter, system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(inputStatus, width / 2, height / 2);
+        ctx.restore();
+        animationRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       if (shouldSpawnFruit(lastSpawnRef.current, now, levelConfig)) {
         fruitsRef.current.push(createFruit(width, height, levelConfig));
         lastSpawnRef.current = now;
       }
 
-      const sword = updateSword(swordRef.current, handPointRef.current, width, height);
+      const activePoint = inputModeRef.current === 'mouse' ? mousePointRef.current : inputPointRef.current;
+      const sword = updateSword(swordRef.current, activePoint, width, height);
       const previousTip = { x: sword.previousTipX, y: sword.previousTipY };
       const currentTip = { x: sword.tipX, y: sword.tipY };
 
@@ -399,7 +449,7 @@ export default function GameCanvas({
             callbacksRef.current.onLoseLife();
             lostLivesRef.current += 1;
             playSound('explosion');
-            particlesRef.current.push(...createParticles(fruit.x, fruit.y, '#ff6537', 28, true));
+            particlesRef.current.push(...createParticles(fruit.x, fruit.y, '#ff6537', 20, true));
             if (lostLivesRef.current >= 3) {
               playSound('gameover');
               callbacksRef.current.onGameOver(scoreRef.current);
@@ -413,7 +463,7 @@ export default function GameCanvas({
             callbacksRef.current.onScore(fruitConfig.points);
             playSound('slice');
             halvesRef.current.push(...createHalves(fruit));
-            particlesRef.current.push(...createParticles(fruit.x, fruit.y, fruitConfig.splash, 16));
+            particlesRef.current.push(...createParticles(fruit.x, fruit.y, fruitConfig.splash, 10));
             publishStats();
 
             if (levelFruitCountRef.current >= levelConfig.target) {
@@ -486,17 +536,6 @@ export default function GameCanvas({
         ctx.restore();
       }
 
-      if (!cameraReadyRef.current) {
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 22px Inter, system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('Activando camara y MediaPipe...', width / 2, height / 2);
-        ctx.restore();
-      }
-
       if (fpsChanged) {
         publishStats();
       }
@@ -521,7 +560,34 @@ export default function GameCanvas({
       levelFruitCountRef.current = 0;
       totalFruitCountRef.current = 0;
     };
-  }, [handleResize, handPointRef]);
+  }, [handleResize, inputPointRef, inputStatus]);
 
-  return <canvas ref={canvasRef} className="game-canvas" aria-label="Fruit Ninja Cam game canvas" />;
+  const handlePointerMove = useCallback((event) => {
+    if (inputMode !== 'mouse') {
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    mousePointRef.current = {
+      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+    };
+  }, [inputMode]);
+
+  const handlePointerLeave = useCallback(() => {
+    if (inputMode === 'mouse') {
+      mousePointRef.current = null;
+    }
+  }, [inputMode]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="game-canvas"
+      aria-label="Fruit Ninja Cam game canvas"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+    />
+  );
 }

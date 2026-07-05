@@ -48,11 +48,12 @@ button {
   transform: scaleX(-1);
   opacity: 0;
   filter: saturate(1.1) contrast(1.05) brightness(0.64);
+  pointer-events: none;
   transition: opacity 260ms ease;
 }
 
 .camera-feed-active {
-  opacity: 0.42;
+  opacity: 0;
 }
 
 .game-canvas {
@@ -72,6 +73,12 @@ button {
   display: grid;
   place-items: center;
   padding: 28px;
+}
+
+.start-screen,
+.game-over-screen {
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 .brand-block,
@@ -130,6 +137,63 @@ h1 {
     box-shadow 160ms ease;
 }
 
+.secondary-button,
+.mode-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-weight: 900;
+  letter-spacing: 0;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.secondary-button:hover,
+.mode-button:hover,
+.icon-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(121, 242, 255, 0.52);
+  background: rgba(121, 242, 255, 0.12);
+}
+
+.secondary-button {
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 24px;
+}
+
+.mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(128px, 1fr));
+  gap: 8px;
+  width: min(360px, 100%);
+  margin: 0 auto 18px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(4, 7, 13, 0.5);
+}
+
+.mode-button {
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.mode-button-active {
+  color: #071017;
+  border-color: rgba(121, 242, 255, 0.65);
+  background: linear-gradient(135deg, #79f2ff, #ffdc5f);
+}
+
 .primary-button:hover {
   transform: translateY(-2px) scale(1.01);
   box-shadow:
@@ -160,6 +224,22 @@ h1 {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(14px);
   transform: translateX(-50%);
+}
+
+.game-controls {
+  position: fixed;
+  z-index: 6;
+  top: max(102px, calc(env(safe-area-inset-top) + 96px));
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.icon-button {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  backdrop-filter: blur(12px);
 }
 
 .score-item {
@@ -219,6 +299,121 @@ h1 {
   margin: 30px 0 32px;
 }
 
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ranking-board {
+  width: min(380px, 100%);
+  margin: 28px auto 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(7, 11, 20, 0.54);
+  text-align: left;
+}
+
+.ranking-board-expanded ol {
+  max-height: min(280px, 34vh);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ranking-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: rgba(247, 251, 255, 0.66);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.ranking-title strong {
+  color: #79f2ff;
+}
+
+.ranking-board ol {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking-board li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ranking-board li span {
+  color: #ffdc5f;
+  font-weight: 950;
+}
+
+.ranking-board li strong {
+  color: #ffffff;
+  font-size: 1.04rem;
+  text-align: right;
+}
+
+.ranking-empty {
+  margin: 0;
+  color: rgba(247, 251, 255, 0.62);
+  text-align: center;
+}
+
+.toggle-ranking-button,
+.clear-ranking-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  margin-top: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.toggle-ranking-button {
+  border: 1px solid rgba(121, 242, 255, 0.34);
+  color: #dffbff;
+  background: rgba(121, 242, 255, 0.08);
+}
+
+.toggle-ranking-button:hover {
+  border-color: rgba(121, 242, 255, 0.62);
+  background: rgba(121, 242, 255, 0.14);
+}
+
+.clear-ranking-button {
+  border: 1px solid rgba(255, 83, 101, 0.38);
+  color: #ffe7ec;
+  background: rgba(255, 83, 101, 0.1);
+}
+
+.clear-ranking-button:hover:not(:disabled) {
+  border-color: rgba(255, 83, 101, 0.72);
+  background: rgba(255, 83, 101, 0.18);
+}
+
+.clear-ranking-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .final-stats span {
   min-width: 170px;
   padding: 13px 18px;
@@ -257,6 +452,12 @@ h1 {
     padding: 10px 12px;
   }
 
+  .game-controls {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+  }
+
   .score-item,
   .record-item {
     justify-content: center;
@@ -273,5 +474,13 @@ h1 {
 
   .primary-button {
     width: min(100%, 320px);
+  }
+
+  .secondary-button {
+    width: min(100%, 320px);
+  }
+
+  .mode-switch {
+    grid-template-columns: 1fr;
   }
 }
