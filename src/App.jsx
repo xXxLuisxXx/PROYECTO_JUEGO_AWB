@@ -6,6 +6,7 @@ import GameOver from './components/GameOver.jsx';
 import ScoreBoard from './components/ScoreBoard.jsx';
 import StartScreen from './components/StartScreen.jsx';
 import useHandTracking from './hooks/useHandTracking.js';
+import { getLevelConfig } from './services/levels.js';
 
 const RECORD_KEY = 'fruit-ninja-cam-record';
 const RANKINGS_KEY = 'fruit-ninja-cam-rankings';
@@ -14,6 +15,12 @@ const EMPTY_RANKINGS = {
   mouse: [],
 };
 const MAX_RANKING_ENTRIES = 50;
+const MAX_LIVES = 3;
+
+function normalizePlayerName(name) {
+  const trimmedName = name.trim().replace(/\s+/g, ' ');
+  return trimmedName || 'Jugador';
+}
 
 function loadRankings() {
   try {
@@ -40,6 +47,9 @@ export default function App() {
   const endedRef = useRef(false);
   const [status, setStatus] = useState('start');
   const [inputMode, setInputMode] = useState('camera');
+  const [playerName, setPlayerName] = useState('');
+  const [startLevel, setStartLevel] = useState(1);
+  const [difficulty, setDifficulty] = useState('normal');
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [record, setRecord] = useState(() => Number(localStorage.getItem(RECORD_KEY) || 0));
@@ -57,25 +67,34 @@ export default function App() {
   const isPaused = status === 'paused';
   const isGameActive = isPlaying || isPaused;
   const usesCamera = inputMode === 'camera';
+
   const { handPointRef, isCameraReady, hasSeenHand, isHandVisible, error } = useHandTracking(
     videoRef,
     usesCamera && isPlaying,
   );
 
-  const startGame = useCallback(() => {
+  const startGame = useCallback((settings = {}) => {
+    const nextPlayerName = typeof settings === 'string' ? settings : settings.playerName || playerName;
+    const nextStartLevel = typeof settings === 'object' && settings.startLevel ? settings.startLevel : startLevel;
+    const nextDifficulty = typeof settings === 'object' && settings.difficulty ? settings.difficulty : difficulty;
+    const initialLevelConfig = getLevelConfig(nextStartLevel, nextDifficulty);
+
     endedRef.current = false;
+    setPlayerName(normalizePlayerName(nextPlayerName));
+    setStartLevel(nextStartLevel);
+    setDifficulty(nextDifficulty);
     setScore(0);
-    setLives(3);
+    setLives(MAX_LIVES);
     setTotalFruits(0);
     setLevelStats({
-      level: 1,
+      level: nextStartLevel,
       fruits: 0,
-      target: 10,
+      target: initialLevelConfig.target,
       totalFruits: 0,
       fps: 0,
     });
     setStatus('playing');
-  }, []);
+  }, [difficulty, playerName, startLevel]);
 
   const goHome = useCallback(() => {
     endedRef.current = true;
@@ -98,6 +117,7 @@ export default function App() {
         [inputMode]: trimScores([
           ...(currentRankings[inputMode] || []),
           {
+            name: normalizePlayerName(playerName),
             score: finalScore,
             date: new Date().toISOString(),
           },
@@ -106,7 +126,7 @@ export default function App() {
       localStorage.setItem(RANKINGS_KEY, JSON.stringify(nextRankings));
       return nextRankings;
     });
-  }, [inputMode]);
+  }, [inputMode, playerName]);
 
   const saveRecord = useCallback((finalScore) => {
     setRecord((currentRecord) => {
@@ -135,6 +155,7 @@ export default function App() {
     if (endedRef.current) {
       return;
     }
+
     endedRef.current = true;
     setScore(finalScore);
     setStatus('gameover');
@@ -146,6 +167,7 @@ export default function App() {
     if (endedRef.current) {
       return;
     }
+
     endedRef.current = true;
     setScore(finalScore);
     setTotalFruits(finalTotalFruits);
@@ -165,6 +187,10 @@ export default function App() {
 
   const loseLife = useCallback(() => {
     setLives((current) => Math.max(0, current - 1));
+  }, []);
+
+  const recoverLife = useCallback(() => {
+    setLives((current) => Math.min(MAX_LIVES, current + 1));
   }, []);
 
   useEffect(() => {
@@ -205,11 +231,13 @@ export default function App() {
             levelStats={levelStats}
             showFps
           />
+
           <GameControls
             paused={isPaused}
             onPauseToggle={togglePause}
             onHome={goHome}
           />
+
           <GameCanvas
             inputPointRef={handPointRef}
             inputMode={inputMode}
@@ -219,9 +247,13 @@ export default function App() {
                 ? 'Pon tu mano frente a la camara'
                 : 'Activando camara y MediaPipe...'
             }
+            lives={lives}
+            startLevel={startLevel}
+            difficulty={difficulty}
             paused={isPaused}
             onScore={addScore}
             onLoseLife={loseLife}
+            onRecoverLife={recoverLife}
             onGameOver={finishGame}
             onLevelStats={updateLevelStats}
             onVictory={finishVictory}

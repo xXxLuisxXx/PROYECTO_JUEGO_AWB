@@ -24,14 +24,26 @@ export default function RankingBoard({ rankings, activeMode = 'camera', onClear 
       </div>
 
       {scores.length > 0 ? (
-        <ol>
-          {visibleScores.map((entry, index) => (
-            <li key={`${entry.score}-${entry.date}-${index}`}>
-              <span>{index + 1}</span>
-              <strong>{String(entry.score).padStart(4, '0')}</strong>
-            </li>
-          ))}
-        </ol>
+      <ol style={{ padding: 0, listStyle: 'none', margin: 0 }}>
+  {visibleScores.map((entry, index) => (
+    <li 
+      key={`${entry.name}-${entry.date}-${index}`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        padding: '8px 4px'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ minWidth: '20px', fontWeight: 'bold' }}>{index + 1}</span>
+        <span style={{ margin: 0 }}>{entry.name || 'Jugador'}</span>
+      </div>
+      <strong style={{ marginLeft: 'auto' }}>{entry.score} pts</strong>
+    </li>
+  ))}
+</ol>
       ) : (
         <p className="ranking-empty">Sin puntajes todavia</p>
       )}

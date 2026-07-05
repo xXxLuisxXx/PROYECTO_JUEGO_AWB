@@ -243,6 +243,7 @@ export default function GameCanvas({
   onGameOver,
   onLevelStats,
   onVictory,
+  onRecoverLife,
 }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(0);
@@ -266,11 +267,11 @@ export default function GameCanvas({
   const totalFruitCountRef = useRef(0);
   const levelMessageRef = useRef(null);
   const fpsRef = useRef({ frames: 0, lastTime: performance.now(), value: 0 });
-  const callbacksRef = useRef({ onScore, onLoseLife, onGameOver, onLevelStats, onVictory });
+  const callbacksRef = useRef({ onScore, onLoseLife, onGameOver, onLevelStats, onVictory, onRecoverLife });
 
   useEffect(() => {
-    callbacksRef.current = { onScore, onLoseLife, onGameOver, onLevelStats, onVictory };
-  }, [onGameOver, onLevelStats, onLoseLife, onScore, onVictory]);
+    callbacksRef.current = { onScore, onLoseLife, onGameOver, onLevelStats, onVictory, onRecoverLife };
+  }, [onGameOver, onLevelStats, onLoseLife, onScore, onVictory, onRecoverLife]);
 
   useEffect(() => {
     inputReadyRef.current = isInputReady;
@@ -348,6 +349,9 @@ export default function GameCanvas({
         stopped = true;
         return;
       }
+      if (callbacksRef.current && typeof callbacksRef.current.onRecoverLife === 'function') {
+    callbacksRef.current.onRecoverLife();
+  }
 
       levelRef.current += 1;
       levelFruitCountRef.current = 0;
