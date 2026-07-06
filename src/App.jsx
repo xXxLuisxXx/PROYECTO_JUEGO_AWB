@@ -74,8 +74,8 @@ export default function App() {
   );
 
   const startGame = useCallback((settings = {}) => {
-    const nextPlayerName = typeof settings === 'string' ? settings : settings.playerName || playerName;
-    const nextStartLevel = typeof settings === 'object' && settings.startLevel ? settings.startLevel : startLevel;
+    const nextPlayerName = typeof settings === 'object' && settings.playerName ? settings.playerName : (typeof settings === 'string' ? settings : playerName);
+    const nextStartLevel = settings?.startLevel ? Number(settings.startLevel) : startLevel;
     const nextDifficulty = typeof settings === 'object' && settings.difficulty ? settings.difficulty : difficulty;
     const initialLevelConfig = getLevelConfig(nextStartLevel, nextDifficulty);
 
@@ -94,7 +94,7 @@ export default function App() {
       fps: 0,
     });
     setStatus('playing');
-  }, [difficulty, playerName, startLevel]);
+  }, [playerName, startLevel, difficulty]);
 
   const goHome = useCallback(() => {
     endedRef.current = true;
@@ -239,6 +239,7 @@ export default function App() {
           />
 
           <GameCanvas
+            key={`${startLevel}-${difficulty}`}
             inputPointRef={handPointRef}
             inputMode={inputMode}
             isInputReady={!usesCamera || (isCameraReady && hasSeenHand)}

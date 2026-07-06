@@ -235,6 +235,8 @@ function drawSlashes(ctx, slashes) {
 export default function GameCanvas({
   inputPointRef,
   inputMode,
+  startLevel,
+  difficulty,
   isInputReady,
   inputStatus,
   paused,
@@ -262,7 +264,7 @@ export default function GameCanvas({
   const lastSpawnRef = useRef(0);
   const scoreRef = useRef(0);
   const lostLivesRef = useRef(0);
-  const levelRef = useRef(1);
+  const levelRef = useRef(startLevel);
   const levelFruitCountRef = useRef(0);
   const totalFruitCountRef = useRef(0);
   const levelMessageRef = useRef(null);
@@ -301,6 +303,10 @@ export default function GameCanvas({
   }, []);
 
   useEffect(() => {
+  levelRef.current = startLevel;
+  }, [startLevel]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
     let lastTime = performance.now();
@@ -309,12 +315,12 @@ export default function GameCanvas({
     handleResize();
     window.addEventListener('resize', handleResize);
     callbacksRef.current.onLevelStats({
-      level: 1,
-      target: getLevelConfig(1).target,
+      level: startLevel,
+      target: getLevelConfig(startLevel).target,
       fruits: 0,
       totalFruits: 0,
       fps: 0,
-    });
+  });
 
     function updateFps(now) {
       const fps = fpsRef.current;
