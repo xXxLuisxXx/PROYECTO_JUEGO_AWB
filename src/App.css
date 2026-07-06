@@ -773,7 +773,7 @@ h1 {
 
 .start-screen .level-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(38px, 1fr));
+  grid-template-columns: repeat(6, minmax(38px, 1fr));
   gap: 8px;
 }
 
@@ -843,6 +843,10 @@ h1 {
 @media (max-width: 680px) {
   .start-screen .mode-switch {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .start-screen .level-grid {
+    grid-template-columns: repeat(5, 1fr);
   }
 
   .start-screen h1 {
@@ -932,4 +936,29 @@ h1 {
 
 .start-screen .ranking-title strong {
   color: #8bff75;
+}
+
+.start-screen .mode-button.mode-button-active {
+  color: #101606;
+  border-color: rgba(255, 248, 216, 0.86);
+  background: linear-gradient(135deg, #8bff75 0%, #ffe27a 100%);
+  box-shadow:
+    0 0 0 2px rgba(255, 248, 216, 0.12),
+    0 12px 26px rgba(139, 255, 117, 0.18);
+  opacity: 1;
+}
+
+.start-screen .mode-button.mode-button-active:last-child {
+  color: #fff8d8;
+  border-color: rgba(255, 107, 87, 0.86);
+  background: linear-gradient(135deg, #ff6b57 0%, #b83a2e 100%);
+  box-shadow:
+    0 0 0 2px rgba(255, 248, 216, 0.1),
+    0 12px 26px rgba(255, 107, 87, 0.22);
+}
+
+.start-screen .mode-button:not(.mode-button-active) {
+  color: rgba(255, 248, 216, 0.56);
+  background: rgba(255, 248, 216, 0.05);
+  opacity: 0.78;
 }

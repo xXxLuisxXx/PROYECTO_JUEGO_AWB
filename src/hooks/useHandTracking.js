@@ -3,9 +3,53 @@ import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
 const MODEL_URL = '/mediapipe/models/hand_landmarker.task';
 const WASM_URL = '/mediapipe/wasm';
-const DETECTION_INTERVAL_MS = 66;
-const POINT_HOLD_MS = 420;
-const SMOOTHING = 0.38;
+const DETECTION_INTERVAL_MS = 50;
+const POINT_STALE_MS = 240;
+const HAND_VISIBLE_HOLD_MS = 650;
+const SMOOTHING = 0.42;
+const DEAD_ZONE = 0.006;
+const MAX_POINT_STEP = 0.18;
+
+function clampPoint(point) {
+  return {
+    x: Math.min(1, Math.max(0, point.x)),
+    y: Math.min(1, Math.max(0, point.y)),
+  };
+}
+
+function limitPointStep(previousPoint, detectedPoint) {
+  if (!previousPoint) {
+    return detectedPoint;
+  }
+
+  const dx = detectedPoint.x - previousPoint.x;
+  const dy = detectedPoint.y - previousPoint.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance <= MAX_POINT_STEP) {
+    return detectedPoint;
+  }
+
+  const scale = MAX_POINT_STEP / distance;
+  return {
+    x: previousPoint.x + dx * scale,
+    y: previousPoint.y + dy * scale,
+  };
+}
+
+function getStableIndexPoint(landmarks) {
+  const indexTip = landmarks?.[8];
+  const indexDip = landmarks?.[7];
+  const indexPip = landmarks?.[6];
+
+  if (!indexTip) {
+    return null;
+  }
+
+  const x = indexTip.x * 0.72 + (indexDip?.x ?? indexTip.x) * 0.18 + (indexPip?.x ?? indexTip.x) * 0.1;
+  const y = indexTip.y * 0.72 + (indexDip?.y ?? indexTip.y) * 0.18 + (indexPip?.y ?? indexTip.y) * 0.1;
+  return clampPoint({ x: 1 - x, y });
+}
 
 async function createHandLandmarker(vision, delegate) {
   return HandLandmarker.createFromOptions(vision, {
@@ -15,9 +59,9 @@ async function createHandLandmarker(vision, delegate) {
     },
     runningMode: 'VIDEO',
     numHands: 1,
-    minHandDetectionConfidence: 0.55,
-    minHandPresenceConfidence: 0.55,
-    minTrackingConfidence: 0.5,
+    minHandDetectionConfidence: 0.42,
+    minHandPresenceConfidence: 0.42,
+    minTrackingConfidence: 0.38,
   });
 }
 
@@ -70,6 +114,8 @@ export default function useHandTracking(videoRef, active) {
 
         streamRef.current = stream;
         const video = videoRef.current;
+        video.playsInline = true;
+        video.muted = true;
         video.srcObject = stream;
         await video.play();
         setIsCameraReady(true);
@@ -78,10 +124,10 @@ export default function useHandTracking(videoRef, active) {
           const vision = await FilesetResolver.forVisionTasks(WASM_URL);
 
           try {
-            landmarkerRef.current = await createHandLandmarker(vision, 'CPU');
-          } catch (cpuError) {
-            console.warn('MediaPipe CPU no disponible, usando GPU.', cpuError);
             landmarkerRef.current = await createHandLandmarker(vision, 'GPU');
+          } catch (gpuError) {
+            console.warn('MediaPipe GPU no disponible, usando CPU.', gpuError);
+            landmarkerRef.current = await createHandLandmarker(vision, 'CPU');
           }
         }
 
@@ -111,17 +157,19 @@ export default function useHandTracking(videoRef, active) {
               return;
             }
 
-            const indexTip = result.landmarks?.[0]?.[8];
+            const detectedPoint = getStableIndexPoint(result.landmarks?.[0]);
 
-            if (indexTip) {
-              const detectedPoint = {
-                x: 1 - indexTip.x,
-                y: indexTip.y,
-              };
-              const previousPoint = smoothedPointRef.current || detectedPoint;
+            if (detectedPoint) {
+              const limitedPoint = limitPointStep(smoothedPointRef.current, detectedPoint);
+              const previousPoint = smoothedPointRef.current || limitedPoint;
+              const distance = Math.hypot(limitedPoint.x - previousPoint.x, limitedPoint.y - previousPoint.y);
               const nextPoint = {
-                x: previousPoint.x + (detectedPoint.x - previousPoint.x) * SMOOTHING,
-                y: previousPoint.y + (detectedPoint.y - previousPoint.y) * SMOOTHING,
+                x: distance < DEAD_ZONE
+                  ? previousPoint.x
+                  : previousPoint.x + (limitedPoint.x - previousPoint.x) * SMOOTHING,
+                y: distance < DEAD_ZONE
+                  ? previousPoint.y
+                  : previousPoint.y + (limitedPoint.y - previousPoint.y) * SMOOTHING,
               };
 
               lastHandSeenTimeRef.current = now;
@@ -136,14 +184,23 @@ export default function useHandTracking(videoRef, active) {
                 hasSeenHandRef.current = true;
                 setHasSeenHand(true);
               }
-            } else if (now - lastHandSeenTimeRef.current > POINT_HOLD_MS) {
+            } else if (now - lastHandSeenTimeRef.current > POINT_STALE_MS) {
               handPointRef.current = null;
               smoothedPointRef.current = null;
+            }
+
+            if (!detectedPoint && now - lastHandSeenTimeRef.current > HAND_VISIBLE_HOLD_MS) {
               if (hasHandRef.current) {
                 hasHandRef.current = false;
                 setIsHandVisible(false);
               }
             }
+          }
+
+          const staleTime = performance.now() - lastHandSeenTimeRef.current;
+          if (handPointRef.current && staleTime > POINT_STALE_MS) {
+            handPointRef.current = null;
+            smoothedPointRef.current = null;
           }
 
           frameRef.current = requestAnimationFrame(detect);

@@ -1,12 +1,13 @@
 import { Camera, MousePointer2, Play, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { MAX_LEVEL } from '../services/levels.js';
 import RankingBoard from './RankingBoard.jsx';
 
 export default function StartScreen({ inputMode, onModeChange, onStart, rankings, onClearRanking }) {
   const [playerName, setPlayerName] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [selectedDifficulty, setSelectedDifficulty] = useState('normal');
-  const levels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+  const levels = Array.from({ length: MAX_LEVEL }, (_, index) => index + 1);
 
   return (
     <section className="screen-layer start-screen">

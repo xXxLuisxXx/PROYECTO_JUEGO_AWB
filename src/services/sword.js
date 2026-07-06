@@ -61,9 +61,8 @@ export function updateSword(sword, rawPoint, width, height) {
     sword.angle = Math.atan2(dy, dx);
   }
 
-  const length = getSwordSize(width);
-  sword.tipX = sword.x + Math.cos(sword.angle) * length * SWORD_CONFIG.tipOffset;
-  sword.tipY = sword.y + Math.sin(sword.angle) * length * SWORD_CONFIG.tipOffset;
+  sword.tipX = sword.x;
+  sword.tipY = sword.y;
   return sword;
 }
 
@@ -82,10 +81,10 @@ export function drawSword(ctx, sword, image, width) {
   ctx.shadowBlur = 16;
 
   if (image?.complete) {
-    ctx.drawImage(image, -swordWidth * 0.38, -swordHeight / 2, swordWidth, swordHeight);
+    ctx.drawImage(image, -swordWidth * 0.86, -swordHeight / 2, swordWidth, swordHeight);
   } else {
     ctx.fillStyle = '#9ff7ff';
-    ctx.fillRect(-swordWidth * 0.38, -3, swordWidth, 6);
+    ctx.fillRect(-swordWidth * 0.86, -3, swordWidth, 6);
   }
 
   ctx.restore();

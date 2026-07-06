@@ -82,6 +82,281 @@ function createHalves(fruit) {
   ];
 }
 
+function fillLeaf(ctx, x, y, size, angle = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#35b85d';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size * 0.72, size * 0.34, -0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStem(ctx, x, y, height, angle = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.strokeStyle = '#6b3f1e';
+  ctx.lineWidth = Math.max(3, height * 0.16);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, -height);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawSeeds(ctx, positions, size, color = '#16120c') {
+  ctx.fillStyle = color;
+  positions.forEach(([x, y, angle = 0]) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, size * 0.44, size, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawApple(ctx, r) {
+  const gradient = ctx.createRadialGradient(-r * 0.28, -r * 0.32, r * 0.12, 0, 0, r);
+  gradient.addColorStop(0, '#ff7a78');
+  gradient.addColorStop(0.5, '#f32942');
+  gradient.addColorStop(1, '#b91227');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(0, -r * 0.82);
+  ctx.bezierCurveTo(-r * 0.56, -r * 1.06, -r * 1.1, -r * 0.36, -r * 0.86, r * 0.28);
+  ctx.bezierCurveTo(-r * 0.62, r * 0.98, -r * 0.08, r * 1.08, 0, r * 0.88);
+  ctx.bezierCurveTo(r * 0.08, r * 1.08, r * 0.62, r * 0.98, r * 0.86, r * 0.28);
+  ctx.bezierCurveTo(r * 1.1, -r * 0.36, r * 0.56, -r * 1.06, 0, -r * 0.82);
+  ctx.fill();
+  drawStem(ctx, r * 0.08, -r * 0.72, r * 0.42, -0.2);
+  fillLeaf(ctx, r * 0.34, -r * 0.95, r * 0.34, -0.35);
+}
+
+function drawOrange(ctx, r) {
+  const gradient = ctx.createRadialGradient(-r * 0.3, -r * 0.28, r * 0.12, 0, 0, r);
+  gradient.addColorStop(0, '#ffd18a');
+  gradient.addColorStop(0.45, '#ff8b2d');
+  gradient.addColorStop(1, '#dc5f10');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 237, 180, 0.32)';
+  ctx.lineWidth = 2;
+  for (let i = -2; i <= 2; i += 1) {
+    ctx.beginPath();
+    ctx.arc(i * r * 0.18, 0, r * (0.48 + Math.abs(i) * 0.07), -1.2, 1.2);
+    ctx.stroke();
+  }
+}
+
+function drawLemon(ctx, r) {
+  const gradient = ctx.createLinearGradient(-r, -r, r, r);
+  gradient.addColorStop(0, '#fff8a8');
+  gradient.addColorStop(0.55, '#f6df33');
+  gradient.addColorStop(1, '#d0ae13');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 1.02, r * 0.62, -0.18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255, 255, 210, 0.36)';
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.3, -r * 0.22, r * 0.34, r * 0.12, -0.35, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawStrawberry(ctx, r) {
+  const gradient = ctx.createRadialGradient(-r * 0.24, -r * 0.34, r * 0.12, 0, 0, r);
+  gradient.addColorStop(0, '#ff7890');
+  gradient.addColorStop(0.58, '#ef274f');
+  gradient.addColorStop(1, '#a40c2c');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(0, r * 0.95);
+  ctx.bezierCurveTo(-r * 1.02, r * 0.24, -r * 0.72, -r * 0.92, 0, -r * 0.62);
+  ctx.bezierCurveTo(r * 0.72, -r * 0.92, r * 1.02, r * 0.24, 0, r * 0.95);
+  ctx.fill();
+  fillLeaf(ctx, -r * 0.28, -r * 0.72, r * 0.3, 0.35);
+  fillLeaf(ctx, 0, -r * 0.78, r * 0.32, Math.PI / 2);
+  fillLeaf(ctx, r * 0.28, -r * 0.72, r * 0.3, -0.35);
+  drawSeeds(ctx, [
+    [-r * 0.34, -r * 0.18, -0.2], [0, -r * 0.24, 0], [r * 0.34, -r * 0.18, 0.2],
+    [-r * 0.22, r * 0.18, -0.1], [r * 0.22, r * 0.18, 0.1], [0, r * 0.48, 0],
+  ], r * 0.06, '#ffd778');
+}
+
+function drawGrape(ctx, r) {
+  const grapes = [
+    [-0.34, -0.36], [0.08, -0.4], [0.42, -0.2],
+    [-0.48, 0.02], [-0.08, 0.02], [0.3, 0.18],
+    [-0.24, 0.42], [0.14, 0.5],
+  ];
+  grapes.forEach(([x, y], index) => {
+    const gradient = ctx.createRadialGradient(r * x - r * 0.08, r * y - r * 0.08, r * 0.04, r * x, r * y, r * 0.35);
+    gradient.addColorStop(0, '#cab8ff');
+    gradient.addColorStop(0.45, '#8d63f7');
+    gradient.addColorStop(1, '#4d2aa6');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(r * x, r * y, r * (index < 2 ? 0.32 : 0.34), 0, Math.PI * 2);
+    ctx.fill();
+  });
+  drawStem(ctx, -r * 0.05, -r * 0.58, r * 0.35, 0.4);
+  fillLeaf(ctx, r * 0.26, -r * 0.78, r * 0.28, -0.25);
+}
+
+function drawMango(ctx, r) {
+  const gradient = ctx.createLinearGradient(-r, -r, r, r);
+  gradient.addColorStop(0, '#ffcf4c');
+  gradient.addColorStop(0.5, '#ff8f2f');
+  gradient.addColorStop(1, '#ef3e42');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.78, r * 1.02, 0.58, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255, 244, 170, 0.28)';
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.24, -r * 0.22, r * 0.24, r * 0.46, 0.55, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPear(ctx, r) {
+  const gradient = ctx.createRadialGradient(-r * 0.2, -r * 0.24, r * 0.12, 0, 0, r);
+  gradient.addColorStop(0, '#d7ff92');
+  gradient.addColorStop(0.52, '#95d84f');
+  gradient.addColorStop(1, '#4f9f2c');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(0, -r * 0.98);
+  ctx.bezierCurveTo(-r * 0.42, -r * 0.92, -r * 0.46, -r * 0.38, -r * 0.8, -r * 0.02);
+  ctx.bezierCurveTo(-r * 1.2, r * 0.46, -r * 0.68, r * 1.06, 0, r * 1.0);
+  ctx.bezierCurveTo(r * 0.68, r * 1.06, r * 1.2, r * 0.46, r * 0.8, -r * 0.02);
+  ctx.bezierCurveTo(r * 0.46, -r * 0.38, r * 0.42, -r * 0.92, 0, -r * 0.98);
+  ctx.fill();
+  drawStem(ctx, r * 0.06, -r * 0.86, r * 0.36, -0.15);
+  fillLeaf(ctx, r * 0.3, -r * 1.02, r * 0.28, -0.28);
+}
+
+function drawCoconut(ctx, r) {
+  const gradient = ctx.createRadialGradient(-r * 0.28, -r * 0.3, r * 0.12, 0, 0, r);
+  gradient.addColorStop(0, '#b98155');
+  gradient.addColorStop(0.55, '#704626');
+  gradient.addColorStop(1, '#321c10');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.98, r * 0.84, -0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 231, 194, 0.22)';
+  ctx.lineWidth = 2;
+  [-0.32, 0, 0.32].forEach((x) => {
+    ctx.beginPath();
+    ctx.arc(r * x, -r * 0.2, r * 0.08, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  ctx.fillStyle = 'rgba(255, 244, 221, 0.22)';
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.22, -r * 0.18, r * 0.24, r * 0.12, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawBanana(ctx, r) {
+  ctx.fillStyle = '#ffd84f';
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.96, -r * 0.08);
+  ctx.bezierCurveTo(-r * 0.54, r * 0.82, r * 0.58, r * 0.74, r * 0.98, -r * 0.2);
+  ctx.bezierCurveTo(r * 0.46, r * 0.28, -r * 0.3, r * 0.22, -r * 0.72, -r * 0.34);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#b98216';
+  ctx.lineWidth = Math.max(3, r * 0.08);
+  ctx.stroke();
+  ctx.fillStyle = '#6b3f1e';
+  ctx.beginPath();
+  ctx.arc(-r * 0.9, -r * 0.15, r * 0.12, 0, Math.PI * 2);
+  ctx.arc(r * 0.96, -r * 0.2, r * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawWatermelon(ctx, r) {
+  ctx.fillStyle = '#1f9b4f';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 1.08, r * 0.82, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d7ffbe';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.92, r * 0.68, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ff3157';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.78, r * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawSeeds(ctx, [
+    [-r * 0.34, -r * 0.08, -0.2], [0, -r * 0.16, 0], [r * 0.34, -r * 0.08, 0.2],
+    [-r * 0.18, r * 0.18, -0.15], [r * 0.18, r * 0.18, 0.15],
+  ], r * 0.08);
+  ctx.strokeStyle = 'rgba(9, 72, 35, 0.55)';
+  ctx.lineWidth = 3;
+  [-0.55, 0, 0.55].forEach((x) => {
+    ctx.beginPath();
+    ctx.arc(r * x, 0, r * 0.6, -1.1, 1.1);
+    ctx.stroke();
+  });
+}
+
+function drawPineapple(ctx, r) {
+  ctx.fillStyle = '#2fbd5b';
+  [-0.38, -0.12, 0.12, 0.38].forEach((x, index) => {
+    ctx.save();
+    ctx.translate(r * x, -r * 1.02);
+    ctx.rotate((index - 1.5) * 0.35);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-r * 0.2, r * 0.52);
+    ctx.lineTo(r * 0.2, r * 0.52);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+  const gradient = ctx.createLinearGradient(0, -r, 0, r);
+  gradient.addColorStop(0, '#ffd75c');
+  gradient.addColorStop(1, '#d47a12');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.roundRect(-r * 0.68, -r * 0.72, r * 1.36, r * 1.48, r * 0.28);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(112, 66, 12, 0.52)';
+  ctx.lineWidth = 2;
+  for (let i = -3; i <= 3; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.76, i * r * 0.24);
+    ctx.lineTo(r * 0.76, i * r * 0.24 + r * 0.44);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.76, i * r * 0.24);
+    ctx.lineTo(-r * 0.76, i * r * 0.24 + r * 0.44);
+    ctx.stroke();
+  }
+}
+
+const FRUIT_DRAWERS = {
+  apple: drawApple,
+  orange: drawOrange,
+  lemon: drawLemon,
+  strawberry: drawStrawberry,
+  grape: drawGrape,
+  mango: drawMango,
+  pear: drawPear,
+  coconut: drawCoconut,
+  banana: drawBanana,
+  watermelon: drawWatermelon,
+  pineapple: drawPineapple,
+};
+
 function drawFruit(ctx, fruit) {
   if (fruit.type === 'bomb') {
     drawBomb(ctx, fruit);
@@ -93,73 +368,79 @@ function drawFruit(ctx, fruit) {
   ctx.translate(fruit.x, fruit.y);
   ctx.rotate(fruit.rotation);
   ctx.shadowColor = config.splash;
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = config.color;
-  ctx.beginPath();
-
-  if (fruit.type === 'banana') {
-    ctx.ellipse(0, 0, fruit.radius * 0.55, fruit.radius * 1.05, -0.7, 0, Math.PI * 2);
-  } else if (fruit.type === 'pineapple') {
-    ctx.roundRect(-fruit.radius * 0.65, -fruit.radius * 0.8, fruit.radius * 1.3, fruit.radius * 1.6, 10);
-  } else if (fruit.type === 'watermelon' || fruit.type === 'mango' || fruit.type === 'coconut') {
-    ctx.ellipse(0, 0, fruit.radius * 1.05, fruit.radius * 0.86, 0, 0, Math.PI * 2);
-  } else if (fruit.type === 'pear') {
-    ctx.ellipse(0, fruit.radius * 0.12, fruit.radius * 0.86, fruit.radius * 1.06, 0, 0, Math.PI * 2);
-  } else if (fruit.type === 'strawberry') {
-    ctx.moveTo(0, fruit.radius);
-    ctx.bezierCurveTo(-fruit.radius, fruit.radius * 0.28, -fruit.radius * 0.72, -fruit.radius, 0, -fruit.radius * 0.62);
-    ctx.bezierCurveTo(fruit.radius * 0.72, -fruit.radius, fruit.radius, fruit.radius * 0.28, 0, fruit.radius);
-  } else {
-    ctx.arc(0, 0, fruit.radius, 0, Math.PI * 2);
-  }
-
-  ctx.fill();
+  ctx.shadowBlur = 12;
+  FRUIT_DRAWERS[fruit.type]?.(ctx, fruit.radius);
   ctx.shadowBlur = 0;
-  ctx.fillStyle = config.flesh;
-  ctx.globalAlpha = 0.86;
-  ctx.beginPath();
-  ctx.arc(-fruit.radius * 0.22, -fruit.radius * 0.22, fruit.radius * 0.25, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  if (fruit.type === 'pineapple') {
-    ctx.strokeStyle = '#815414';
-    ctx.lineWidth = 2;
-    for (let i = -2; i <= 2; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(-fruit.radius, i * 14);
-      ctx.lineTo(fruit.radius, i * 14 + 20);
-      ctx.stroke();
-    }
-  }
-
-  ctx.fillStyle = 'rgba(8, 12, 18, 0.55)';
-  ctx.font = `800 ${Math.max(17, fruit.radius * 0.56)}px Inter, system-ui`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(config.emoji, 0, 2);
   ctx.restore();
 }
 
 function drawBomb(ctx, bomb) {
+  const r = bomb.radius;
+
   ctx.save();
   ctx.translate(bomb.x, bomb.y);
   ctx.rotate(bomb.rotation);
-  ctx.shadowColor = '#ff6537';
-  ctx.shadowBlur = 16;
-  ctx.fillStyle = '#1c2029';
+
+  ctx.shadowColor = '#ff6b2f';
+  ctx.shadowBlur = 18;
+  const bodyGradient = ctx.createRadialGradient(-r * 0.34, -r * 0.36, r * 0.12, 0, 0, r);
+  bodyGradient.addColorStop(0, '#5a6575');
+  bodyGradient.addColorStop(0.38, '#202733');
+  bodyGradient.addColorStop(1, '#080b10');
+  ctx.fillStyle = bodyGradient;
   ctx.beginPath();
-  ctx.arc(0, 0, bomb.radius, 0, Math.PI * 2);
+  ctx.arc(0, r * 0.08, r * 0.92, 0, Math.PI * 2);
   ctx.fill();
+
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = '#ffce73';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#05070a';
+  ctx.lineWidth = Math.max(3, r * 0.08);
   ctx.beginPath();
-  ctx.arc(0, 0, bomb.radius * 0.68, -0.8, 0.8);
+  ctx.arc(0, r * 0.08, r * 0.92, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.fillStyle = '#ff6537';
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
   ctx.beginPath();
-  ctx.arc(bomb.radius * 0.36, -bomb.radius * 0.62, 7, 0, Math.PI * 2);
+  ctx.ellipse(-r * 0.32, -r * 0.28, r * 0.18, r * 0.1, -0.65, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#4a2c16';
+  ctx.strokeStyle = '#2a160a';
+  ctx.lineWidth = Math.max(2, r * 0.05);
+  ctx.beginPath();
+  ctx.roundRect(-r * 0.2, -r * 0.98, r * 0.4, r * 0.28, r * 0.08);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = '#2f2115';
+  ctx.lineWidth = Math.max(4, r * 0.1);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, -r * 0.96);
+  ctx.bezierCurveTo(r * 0.1, -r * 1.2, r * 0.36, -r * 1.16, r * 0.48, -r * 1.38);
+  ctx.stroke();
+
+  ctx.shadowColor = '#ffdc5f';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#ffdc5f';
+  ctx.beginPath();
+  ctx.moveTo(r * 0.48, -r * 1.52);
+  ctx.lineTo(r * 0.58, -r * 1.34);
+  ctx.lineTo(r * 0.78, -r * 1.32);
+  ctx.lineTo(r * 0.62, -r * 1.2);
+  ctx.lineTo(r * 0.66, -r * 1.02);
+  ctx.lineTo(r * 0.48, -r * 1.12);
+  ctx.lineTo(r * 0.3, -r * 1.02);
+  ctx.lineTo(r * 0.36, -r * 1.22);
+  ctx.lineTo(r * 0.2, -r * 1.34);
+  ctx.lineTo(r * 0.4, -r * 1.36);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ff6b2f';
+  ctx.beginPath();
+  ctx.arc(r * 0.5, -r * 1.29, r * 0.11, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -237,6 +518,8 @@ export default function GameCanvas({
   inputMode,
   isInputReady,
   inputStatus,
+  startLevel = 1,
+  difficulty = 'normal',
   paused,
   onScore,
   onLoseLife,
@@ -262,7 +545,7 @@ export default function GameCanvas({
   const lastSpawnRef = useRef(0);
   const scoreRef = useRef(0);
   const lostLivesRef = useRef(0);
-  const levelRef = useRef(1);
+  const levelRef = useRef(startLevel);
   const levelFruitCountRef = useRef(0);
   const totalFruitCountRef = useRef(0);
   const levelMessageRef = useRef(null);
@@ -305,12 +588,14 @@ export default function GameCanvas({
     const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
     let lastTime = performance.now();
     let stopped = false;
+    levelRef.current = startLevel;
 
     handleResize();
     window.addEventListener('resize', handleResize);
+    const initialLevelConfig = getLevelConfig(startLevel, difficulty);
     callbacksRef.current.onLevelStats({
-      level: 1,
-      target: getLevelConfig(1).target,
+      level: startLevel,
+      target: initialLevelConfig.target,
       fruits: 0,
       totalFruits: 0,
       fps: 0,
@@ -329,7 +614,7 @@ export default function GameCanvas({
     }
 
     function publishStats() {
-      const levelConfig = getLevelConfig(levelRef.current);
+      const levelConfig = getLevelConfig(levelRef.current, difficulty);
       callbacksRef.current.onLevelStats({
         level: levelRef.current,
         target: levelConfig.target,
@@ -374,7 +659,7 @@ export default function GameCanvas({
       const fpsChanged = updateFps(now);
 
       const { width, height } = sizeRef.current;
-      const levelConfig = getLevelConfig(levelRef.current);
+      const levelConfig = getLevelConfig(levelRef.current, difficulty);
 
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = 'rgba(3, 7, 14, 0.22)';
@@ -560,11 +845,11 @@ export default function GameCanvas({
       slashesRef.current = [];
       scoreRef.current = 0;
       lostLivesRef.current = 0;
-      levelRef.current = 1;
+      levelRef.current = startLevel;
       levelFruitCountRef.current = 0;
       totalFruitCountRef.current = 0;
     };
-  }, [handleResize, inputPointRef, inputStatus]);
+  }, [difficulty, handleResize, inputPointRef, inputStatus, startLevel]);
 
   const handlePointerMove = useCallback((event) => {
     if (inputMode !== 'mouse') {
