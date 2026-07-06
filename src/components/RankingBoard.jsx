@@ -2,7 +2,7 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 const MODE_LABELS = {
-  camera: 'Camara',
+  camera: 'Cámara',
   mouse: 'Mouse',
 };
 const COLLAPSED_LIMIT = 3;
@@ -45,7 +45,7 @@ export default function RankingBoard({ rankings, activeMode = 'camera', onClear 
   ))}
 </ol>
       ) : (
-        <p className="ranking-empty">Sin puntajes todavia</p>
+        <p className="ranking-empty">Sin puntajes todavía</p>
       )}
 
       {canToggle && (

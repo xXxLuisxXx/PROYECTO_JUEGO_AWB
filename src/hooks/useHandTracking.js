@@ -3,8 +3,9 @@ import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
 const MODEL_URL = '/mediapipe/models/hand_landmarker.task';
 const WASM_URL = '/mediapipe/wasm';
-const DETECTION_INTERVAL_MS = 50;
-const POINT_HOLD_MS = 220;
+const DETECTION_INTERVAL_MS = 66;
+const POINT_HOLD_MS = 420;
+const SMOOTHING = 0.38;
 
 async function createHandLandmarker(vision, delegate) {
   return HandLandmarker.createFromOptions(vision, {
@@ -28,6 +29,8 @@ export default function useHandTracking(videoRef, active) {
   const lastDetectionTimeRef = useRef(0);
   const lastHandSeenTimeRef = useRef(0);
   const hasHandRef = useRef(false);
+  const hasSeenHandRef = useRef(false);
+  const smoothedPointRef = useRef(null);
   const handPointRef = useRef(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [hasSeenHand, setHasSeenHand] = useState(false);
@@ -47,12 +50,14 @@ export default function useHandTracking(videoRef, active) {
         setHasSeenHand(false);
         setIsHandVisible(false);
         hasHandRef.current = false;
+        hasSeenHandRef.current = false;
+        smoothedPointRef.current = null;
         handPointRef.current = null;
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 424, max: 640 },
-            height: { ideal: 240, max: 480 },
-            frameRate: { ideal: 24, max: 24 },
+            width: { ideal: 360, max: 480 },
+            height: { ideal: 240, max: 360 },
+            frameRate: { ideal: 20, max: 20 },
             facingMode: 'user',
           },
           audio: false,
@@ -109,18 +114,31 @@ export default function useHandTracking(videoRef, active) {
             const indexTip = result.landmarks?.[0]?.[8];
 
             if (indexTip) {
-              lastHandSeenTimeRef.current = now;
-              handPointRef.current = {
+              const detectedPoint = {
                 x: 1 - indexTip.x,
                 y: indexTip.y,
               };
+              const previousPoint = smoothedPointRef.current || detectedPoint;
+              const nextPoint = {
+                x: previousPoint.x + (detectedPoint.x - previousPoint.x) * SMOOTHING,
+                y: previousPoint.y + (detectedPoint.y - previousPoint.y) * SMOOTHING,
+              };
+
+              lastHandSeenTimeRef.current = now;
+              smoothedPointRef.current = nextPoint;
+              handPointRef.current = nextPoint;
+
               if (!hasHandRef.current) {
                 hasHandRef.current = true;
                 setIsHandVisible(true);
               }
-              setHasSeenHand(true);
+              if (!hasSeenHandRef.current) {
+                hasSeenHandRef.current = true;
+                setHasSeenHand(true);
+              }
             } else if (now - lastHandSeenTimeRef.current > POINT_HOLD_MS) {
               handPointRef.current = null;
+              smoothedPointRef.current = null;
               if (hasHandRef.current) {
                 hasHandRef.current = false;
                 setIsHandVisible(false);
@@ -163,6 +181,8 @@ export default function useHandTracking(videoRef, active) {
       streamRef.current = null;
       handPointRef.current = null;
       hasHandRef.current = false;
+      hasSeenHandRef.current = false;
+      smoothedPointRef.current = null;
       setHasSeenHand(false);
       setIsHandVisible(false);
       setIsCameraReady(false);

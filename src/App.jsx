@@ -229,7 +229,6 @@ export default function App() {
             lives={lives}
             record={gameState.record}
             levelStats={levelStats}
-            showFps
           />
 
           <GameControls
@@ -244,8 +243,8 @@ export default function App() {
             isInputReady={!usesCamera || (isCameraReady && hasSeenHand)}
             inputStatus={
               usesCamera && isCameraReady && !isHandVisible
-                ? 'Pon tu mano frente a la camara'
-                : 'Activando camara y MediaPipe...'
+                ? 'Pon tu mano frente a la cámara'
+                : 'Activando cámara...'
             }
             lives={lives}
             startLevel={startLevel}
