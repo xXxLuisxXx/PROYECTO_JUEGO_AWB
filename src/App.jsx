@@ -49,7 +49,6 @@ export default function App() {
   const [inputMode, setInputMode] = useState('camera');
   const [playerName, setPlayerName] = useState('');
   const [startLevel, setStartLevel] = useState(1);
-  const [difficulty, setDifficulty] = useState('normal');
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [record, setRecord] = useState(() => Number(localStorage.getItem(RECORD_KEY) || 0));
@@ -76,13 +75,11 @@ export default function App() {
   const startGame = useCallback((settings = {}) => {
     const nextPlayerName = typeof settings === 'string' ? settings : settings.playerName || playerName;
     const nextStartLevel = typeof settings === 'object' && settings.startLevel ? settings.startLevel : startLevel;
-    const nextDifficulty = typeof settings === 'object' && settings.difficulty ? settings.difficulty : difficulty;
-    const initialLevelConfig = getLevelConfig(nextStartLevel, nextDifficulty);
+    const initialLevelConfig = getLevelConfig(nextStartLevel);
 
     endedRef.current = false;
     setPlayerName(normalizePlayerName(nextPlayerName));
     setStartLevel(nextStartLevel);
-    setDifficulty(nextDifficulty);
     setScore(0);
     setLives(MAX_LIVES);
     setTotalFruits(0);
@@ -94,7 +91,7 @@ export default function App() {
       fps: 0,
     });
     setStatus('playing');
-  }, [difficulty, playerName, startLevel]);
+  }, [playerName, startLevel]);
 
   const goHome = useCallback(() => {
     endedRef.current = true;
@@ -248,7 +245,6 @@ export default function App() {
             }
             lives={lives}
             startLevel={startLevel}
-            difficulty={difficulty}
             paused={isPaused}
             onScore={addScore}
             onLoseLife={loseLife}

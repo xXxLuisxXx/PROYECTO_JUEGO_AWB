@@ -711,7 +711,6 @@ export default function GameCanvas({
   isInputReady,
   inputStatus,
   startLevel = 1,
-  difficulty = 'normal',
   weaponSkin = 'axe',
   energyTheme = 'frost',
   paused,
@@ -801,7 +800,7 @@ export default function GameCanvas({
 
     handleResize();
     window.addEventListener('resize', handleResize);
-    const initialLevelConfig = getLevelConfig(startLevel, difficulty);
+    const initialLevelConfig = getLevelConfig(startLevel);
     callbacksRef.current.onLevelStats({
       level: startLevel,
       target: initialLevelConfig.target,
@@ -823,7 +822,7 @@ export default function GameCanvas({
     }
 
     function publishStats() {
-      const levelConfig = getLevelConfig(levelRef.current, difficulty);
+      const levelConfig = getLevelConfig(levelRef.current);
       callbacksRef.current.onLevelStats({
         level: levelRef.current,
         target: levelConfig.target,
@@ -844,8 +843,9 @@ export default function GameCanvas({
         return;
       }
       if (callbacksRef.current && typeof callbacksRef.current.onRecoverLife === 'function') {
-    callbacksRef.current.onRecoverLife();
-  }
+        callbacksRef.current.onRecoverLife();
+        lostLivesRef.current = Math.max(0, lostLivesRef.current - 1);
+      }
 
       levelRef.current += 1;
       levelFruitCountRef.current = 0;
@@ -877,7 +877,7 @@ export default function GameCanvas({
       }
 
       const { width, height } = sizeRef.current;
-      const levelConfig = getLevelConfig(levelRef.current, difficulty);
+      const levelConfig = getLevelConfig(levelRef.current);
       const weapon = weaponRef.current;
       const energy = energyRef.current;
 
@@ -1115,7 +1115,7 @@ export default function GameCanvas({
       levelFruitCountRef.current = 0;
       totalFruitCountRef.current = 0;
     };
-  }, [difficulty, handleResize, inputPointRef, inputStatus, startLevel]);
+  }, [handleResize, inputPointRef, inputStatus, startLevel]);
 
   const handlePointerMove = useCallback((event) => {
     if (inputMode !== 'mouse') {

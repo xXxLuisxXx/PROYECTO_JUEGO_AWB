@@ -1,4 +1,4 @@
-import { Camera, MousePointer2, Play, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Camera, MousePointer2, Play } from 'lucide-react';
 import { useState } from 'react';
 import { unlockGameAudio } from '../services/audio.js';
 import { MAX_LEVEL } from '../services/levels.js';
@@ -7,7 +7,6 @@ import RankingBoard from './RankingBoard.jsx';
 export default function StartScreen({ inputMode, onModeChange, onStart, rankings, onClearRanking }) {
   const [playerName, setPlayerName] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(1);
-  const [selectedDifficulty, setSelectedDifficulty] = useState('normal');
   const levels = Array.from({ length: MAX_LEVEL }, (_, index) => index + 1);
 
   return (
@@ -39,7 +38,7 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
                 onClick={() => onModeChange('camera')}
               >
                 <Camera size={18} />
-                Cámara
+                Camara
               </button>
               <button
                 className={inputMode === 'mouse' ? 'mode-button mode-button-active' : 'mode-button'}
@@ -59,7 +58,6 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
                 onStart({
                   playerName,
                   startLevel: selectedLevel,
-                  difficulty: selectedDifficulty,
                 });
               }}
               disabled={!playerName.trim()}
@@ -71,33 +69,6 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
         </div>
 
         <div className="setup-panel">
-          <div className="difficulty-container">
-            <span className="setting-label">Dificultad</span>
-            <div className="difficulty-buttons">
-              <button
-                type="button"
-                className={`diff-btn easy ${selectedDifficulty === 'easy' ? 'active' : ''}`}
-                onClick={() => setSelectedDifficulty('easy')}
-              >
-                <ShieldCheck size={14} /> Fácil
-              </button>
-              <button
-                type="button"
-                className={`diff-btn normal ${selectedDifficulty === 'normal' ? 'active' : ''}`}
-                onClick={() => setSelectedDifficulty('normal')}
-              >
-                <Shield size={14} /> Normal
-              </button>
-              <button
-                type="button"
-                className={`diff-btn hard ${selectedDifficulty === 'hard' ? 'active' : ''}`}
-                onClick={() => setSelectedDifficulty('hard')}
-              >
-                <ShieldAlert size={14} /> Difícil
-              </button>
-            </div>
-          </div>
-
           <div className="level-selector-container">
             <span className="setting-label">Nivel inicial</span>
             <div className="level-grid-board">
@@ -115,7 +86,6 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
               </div>
             </div>
           </div>
-
         </div>
 
         <RankingBoard rankings={rankings} activeMode={inputMode} onClear={onClearRanking} />
