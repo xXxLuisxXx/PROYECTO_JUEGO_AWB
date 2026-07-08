@@ -674,7 +674,7 @@ h1 {
 
 .setup-panel {
   display: grid;
-  grid-template-columns: minmax(190px, 0.8fr) minmax(230px, 1fr) minmax(300px, 1.3fr);
+  grid-template-columns: minmax(230px, 0.8fr) minmax(320px, 1.4fr);
   gap: 16px;
   align-items: start;
   padding: 18px;

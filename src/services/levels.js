@@ -1,16 +1,14 @@
 export const LEVELS = [
-  10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120,
-  128, 136, 145, 154, 164, 174, 185, 196, 208, 220, 232, 244, 256, 268, 280,
+  10, 14, 18, 22, 26, 30, 35, 40, 46, 52, 58, 64, 72, 82, 95,
 ].map((target, index) => {
   const level = index + 1;
-  const extraDifficulty = Math.max(0, level - 15);
 
   return {
     level,
     target,
-    spawnDelay: Math.max(300, 1000 - index * 26 - extraDifficulty * 7),
-    fruitSpeed: 1 + index * 0.034 + extraDifficulty * 0.022,
-    bombChance: Math.min(0.26, 0.08 + index * 0.0045 + extraDifficulty * 0.0035),
+    spawnDelay: Math.max(330, 1000 - index * 44),
+    fruitSpeed: 1 + index * 0.055,
+    bombChance: Math.min(0.28, 0.08 + index * 0.012),
   };
 });
 

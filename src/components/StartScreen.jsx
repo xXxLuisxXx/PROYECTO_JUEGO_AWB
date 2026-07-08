@@ -1,5 +1,6 @@
 import { Camera, MousePointer2, Play, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { unlockGameAudio } from '../services/audio.js';
 import { MAX_LEVEL } from '../services/levels.js';
 import RankingBoard from './RankingBoard.jsx';
 
@@ -21,6 +22,17 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
           </div>
 
           <div className="quick-actions">
+            <label className="player-name-field">
+              <span>Jugador</span>
+              <input
+                type="text"
+                placeholder="Ingresa tu nombre"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                maxLength={15}
+              />
+            </label>
+
             <div className="mode-switch" role="group" aria-label="Modo de control">
               <button
                 className={inputMode === 'camera' ? 'mode-button mode-button-active' : 'mode-button'}
@@ -44,6 +56,7 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
               className="primary-button"
               type="button"
               onClick={() => {
+                unlockGameAudio();
                 onStart({
                   playerName,
                   startLevel: selectedLevel,
@@ -59,18 +72,6 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
         </div>
 
         <div className="setup-panel">
-          <div className="player-name-container">
-            <span className="setting-label">Jugador</span>
-            <input
-              type="text"
-              className="player-name-input"
-              placeholder="Ingresa tu nombre"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              maxLength={15}
-            />
-          </div>
-
           <div className="difficulty-container">
             <span className="setting-label">Dificultad</span>
             <div className="difficulty-buttons">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { segmentIntersectsCircle } from '../services/collision.js';
+import { playSound } from '../services/audio.js';
 import { createFruit, FRUIT_TYPES, shouldSpawnFruit } from '../services/fruitGenerator.js';
 import { getLevelConfig, MAX_LEVEL } from '../services/levels.js';
 import {
@@ -17,37 +18,7 @@ const MAX_IMPACT_RINGS = 14;
 const MAX_FLOATING_TEXTS = 12;
 const MAX_SPRITE_CACHE_SIZE = 96;
 const COMBO_WINDOW_MS = 1000;
-const SOUNDS = {
-  slice: '/assets/sounds/slice.wav',
-  combo: '/assets/sounds/combo.wav',
-  explosion: '/assets/sounds/explosion.wav',
-  gameover: '/assets/sounds/gameover.wav',
-};
-const audioPools = new Map();
 const fruitSpriteCache = new Map();
-
-function playSound(name) {
-  if (!audioPools.has(name)) {
-    audioPools.set(
-      name,
-      Array.from({ length: name === 'slice' ? 5 : 2 }, () => {
-        const audio = new Audio(SOUNDS[name]);
-        audio.volume = name === 'explosion' ? 0.38 : 0.3;
-        audio.preload = 'auto';
-        return audio;
-      }),
-    );
-  }
-
-  const pool = audioPools.get(name);
-  const audio = pool.find((item) => item.paused || item.ended) || pool[0];
-  try {
-    audio.currentTime = 0;
-  } catch {
-    // El navegador puede bloquear el seek si el audio aun no tiene metadata.
-  }
-  audio.play().catch(() => {});
-}
 
 function resizeCanvas(canvas) {
   const rect = canvas.getBoundingClientRect();
