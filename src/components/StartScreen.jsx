@@ -16,7 +16,7 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
           <div>
             <h1>Fruit Ninja</h1>
             <p className="start-copy">
-              Elige tu nivel, prepara tu mano y corta frutas con movimientos rápidos.
+              Prepara tu mano y corta frutas con movimientos rapidos.
             </p>
           </div>
 
@@ -115,6 +115,7 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
               </div>
             </div>
           </div>
+
         </div>
 
         <RankingBoard rankings={rankings} activeMode={inputMode} onClear={onClearRanking} />

@@ -1,0 +1,28 @@
+<svg width="512" height="192" viewBox="0 0 512 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="handle" x1="62" y1="127" x2="433" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b2d13"/>
+      <stop offset="0.45" stop-color="#9a5b26"/>
+      <stop offset="1" stop-color="#3b1d0d"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="313" y1="21" x2="455" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="0.36" stop-color="#bfeeff"/>
+      <stop offset="0.72" stop-color="#6e8da5"/>
+      <stop offset="1" stop-color="#eefaff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(393 88) rotate(90) scale(83 115)">
+      <stop stop-color="#9ff7ff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#9ff7ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="386" cy="91" rx="125" ry="82" fill="url(#glow)" opacity="0.28"/>
+  <path d="M50 136C153 113 251 89 379 49L391 78C268 123 166 151 61 175C50 177 42 171 39 161L37 155C34 146 40 138 50 136Z" fill="url(#handle)"/>
+  <path d="M70 144C164 123 258 98 366 64" stroke="#d59b51" stroke-width="8" stroke-linecap="round" opacity="0.75"/>
+  <path d="M344 35C379 16 435 9 478 36C450 61 453 97 491 130C438 161 381 158 346 139C365 107 366 67 344 35Z" fill="url(#steel)" stroke="#e9fbff" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M353 40C380 57 384 114 354 134C390 119 429 119 466 133C443 106 438 64 460 38C421 50 386 51 353 40Z" fill="#173041" opacity="0.24"/>
+  <path d="M336 60L389 48C405 65 410 105 392 130L336 119C355 101 355 77 336 60Z" fill="#202733" stroke="#111722" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M347 68L381 62C392 76 394 101 382 116L347 111C357 97 357 81 347 68Z" fill="#ffdc5f"/>
+  <path d="M383 31C412 27 440 31 467 44" stroke="#ffffff" stroke-width="7" stroke-linecap="round" opacity="0.62"/>
+  <path d="M459 136C430 148 398 151 369 141" stroke="#ffffff" stroke-width="7" stroke-linecap="round" opacity="0.5"/>
+</svg>

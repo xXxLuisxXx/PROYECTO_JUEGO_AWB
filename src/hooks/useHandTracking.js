@@ -3,12 +3,12 @@ import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
 const MODEL_URL = '/mediapipe/models/hand_landmarker.task';
 const WASM_URL = '/mediapipe/wasm';
-const DETECTION_INTERVAL_MS = 50;
+const DETECTION_INTERVAL_MS = 42;
 const POINT_STALE_MS = 240;
 const HAND_VISIBLE_HOLD_MS = 650;
-const SMOOTHING = 0.42;
-const DEAD_ZONE = 0.006;
-const MAX_POINT_STEP = 0.18;
+const SMOOTHING = 0.68;
+const DEAD_ZONE = 0.004;
+const MAX_POINT_STEP = 0.32;
 
 function clampPoint(point) {
   return {
@@ -99,9 +99,9 @@ export default function useHandTracking(videoRef, active) {
         handPointRef.current = null;
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 360, max: 480 },
-            height: { ideal: 240, max: 360 },
-            frameRate: { ideal: 20, max: 20 },
+            width: { ideal: 320, max: 360 },
+            height: { ideal: 240, max: 270 },
+            frameRate: { ideal: 24, max: 24 },
             facingMode: 'user',
           },
           audio: false,
