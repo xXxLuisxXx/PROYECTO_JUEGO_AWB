@@ -146,6 +146,43 @@ function drawSeeds(ctx, positions, size, color = '#16120c') {
   });
 }
 
+function drawGloss(ctx, r, alpha = 0.34) {
+  const shine = ctx.createRadialGradient(-r * 0.38, -r * 0.42, 0, -r * 0.38, -r * 0.42, r * 0.5);
+  shine.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+  shine.addColorStop(0.42, `rgba(255, 255, 255, ${alpha * 0.32})`);
+  shine.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = shine;
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.34, -r * 0.36, r * 0.34, r * 0.16, -0.45, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawFruitShadow(ctx, r, alpha = 0.26) {
+  const shade = ctx.createRadialGradient(r * 0.22, r * 0.34, 0, r * 0.18, r * 0.3, r * 0.92);
+  shade.addColorStop(0, `rgba(0, 0, 0, ${alpha})`);
+  shade.addColorStop(0.66, `rgba(0, 0, 0, ${alpha * 0.36})`);
+  shade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = shade;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.96, r * 0.92, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawSkinSpeckles(ctx, r, color, count = 18) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < count; i += 1) {
+    const angle = i * 2.399;
+    const distance = r * (0.18 + ((i * 37) % 68) / 100);
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance * 0.82;
+    ctx.globalAlpha = 0.18 + (i % 4) * 0.035;
+    ctx.beginPath();
+    ctx.arc(x, y, r * (0.018 + (i % 3) * 0.006), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawApple(ctx, r) {
   const gradient = ctx.createRadialGradient(-r * 0.28, -r * 0.32, r * 0.12, 0, 0, r);
   gradient.addColorStop(0, '#ff7a78');
@@ -159,6 +196,9 @@ function drawApple(ctx, r) {
   ctx.bezierCurveTo(r * 0.08, r * 1.08, r * 0.62, r * 0.98, r * 0.86, r * 0.28);
   ctx.bezierCurveTo(r * 1.1, -r * 0.36, r * 0.56, -r * 1.06, 0, -r * 0.82);
   ctx.fill();
+  drawFruitShadow(ctx, r, 0.22);
+  drawSkinSpeckles(ctx, r, '#ffd1d1', 14);
+  drawGloss(ctx, r, 0.42);
   drawStem(ctx, r * 0.08, -r * 0.72, r * 0.42, -0.2);
   fillLeaf(ctx, r * 0.34, -r * 0.95, r * 0.34, -0.35);
 }
@@ -172,6 +212,9 @@ function drawOrange(ctx, r) {
   ctx.beginPath();
   ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
   ctx.fill();
+  drawFruitShadow(ctx, r, 0.2);
+  drawSkinSpeckles(ctx, r, '#ffe0a3', 34);
+  drawGloss(ctx, r, 0.24);
   ctx.strokeStyle = 'rgba(255, 237, 180, 0.32)';
   ctx.lineWidth = 2;
   for (let i = -2; i <= 2; i += 1) {
@@ -194,6 +237,9 @@ function drawLemon(ctx, r) {
   ctx.beginPath();
   ctx.ellipse(-r * 0.3, -r * 0.22, r * 0.34, r * 0.12, -0.35, 0, Math.PI * 2);
   ctx.fill();
+  drawFruitShadow(ctx, r, 0.16);
+  drawSkinSpeckles(ctx, r, '#fffbd3', 16);
+  drawGloss(ctx, r, 0.3);
 }
 
 function drawStrawberry(ctx, r) {
@@ -207,6 +253,8 @@ function drawStrawberry(ctx, r) {
   ctx.bezierCurveTo(-r * 1.02, r * 0.24, -r * 0.72, -r * 0.92, 0, -r * 0.62);
   ctx.bezierCurveTo(r * 0.72, -r * 0.92, r * 1.02, r * 0.24, 0, r * 0.95);
   ctx.fill();
+  drawFruitShadow(ctx, r, 0.2);
+  drawGloss(ctx, r, 0.26);
   fillLeaf(ctx, -r * 0.28, -r * 0.72, r * 0.3, 0.35);
   fillLeaf(ctx, 0, -r * 0.78, r * 0.32, Math.PI / 2);
   fillLeaf(ctx, r * 0.28, -r * 0.72, r * 0.3, -0.35);
@@ -231,6 +279,10 @@ function drawGrape(ctx, r) {
     ctx.beginPath();
     ctx.arc(r * x, r * y, r * (index < 2 ? 0.32 : 0.34), 0, Math.PI * 2);
     ctx.fill();
+    ctx.save();
+    ctx.translate(r * x, r * y);
+    drawGloss(ctx, r * 0.35, 0.28);
+    ctx.restore();
   });
   drawStem(ctx, -r * 0.05, -r * 0.58, r * 0.35, 0.4);
   fillLeaf(ctx, r * 0.26, -r * 0.78, r * 0.28, -0.25);
@@ -249,6 +301,8 @@ function drawMango(ctx, r) {
   ctx.beginPath();
   ctx.ellipse(-r * 0.24, -r * 0.22, r * 0.24, r * 0.46, 0.55, 0, Math.PI * 2);
   ctx.fill();
+  drawFruitShadow(ctx, r, 0.18);
+  drawSkinSpeckles(ctx, r, '#ffeeb0', 12);
 }
 
 function drawPear(ctx, r) {
@@ -264,6 +318,9 @@ function drawPear(ctx, r) {
   ctx.bezierCurveTo(r * 0.68, r * 1.06, r * 1.2, r * 0.46, r * 0.8, -r * 0.02);
   ctx.bezierCurveTo(r * 0.46, -r * 0.38, r * 0.42, -r * 0.92, 0, -r * 0.98);
   ctx.fill();
+  drawFruitShadow(ctx, r, 0.22);
+  drawSkinSpeckles(ctx, r, '#e7ffc2', 18);
+  drawGloss(ctx, r, 0.34);
   drawStem(ctx, r * 0.06, -r * 0.86, r * 0.36, -0.15);
   fillLeaf(ctx, r * 0.3, -r * 1.02, r * 0.28, -0.28);
 }
@@ -288,6 +345,7 @@ function drawCoconut(ctx, r) {
   ctx.beginPath();
   ctx.ellipse(-r * 0.22, -r * 0.18, r * 0.24, r * 0.12, -0.4, 0, Math.PI * 2);
   ctx.fill();
+  drawSkinSpeckles(ctx, r, '#d0a17b', 24);
 }
 
 function drawBanana(ctx, r) {
@@ -306,6 +364,7 @@ function drawBanana(ctx, r) {
   ctx.arc(-r * 0.9, -r * 0.15, r * 0.12, 0, Math.PI * 2);
   ctx.arc(r * 0.96, -r * 0.2, r * 0.1, 0, Math.PI * 2);
   ctx.fill();
+  drawGloss(ctx, r, 0.16);
 }
 
 function drawWatermelon(ctx, r) {
@@ -325,6 +384,7 @@ function drawWatermelon(ctx, r) {
     [-r * 0.34, -r * 0.08, -0.2], [0, -r * 0.16, 0], [r * 0.34, -r * 0.08, 0.2],
     [-r * 0.18, r * 0.18, -0.15], [r * 0.18, r * 0.18, 0.15],
   ], r * 0.08);
+  drawGloss(ctx, r, 0.22);
   ctx.strokeStyle = 'rgba(9, 72, 35, 0.55)';
   ctx.lineWidth = 3;
   [-0.55, 0, 0.55].forEach((x) => {
@@ -367,6 +427,7 @@ function drawPineapple(ctx, r) {
     ctx.lineTo(-r * 0.76, i * r * 0.24 + r * 0.44);
     ctx.stroke();
   }
+  drawGloss(ctx, r, 0.18);
 }
 
 const FRUIT_DRAWERS = {
@@ -465,11 +526,24 @@ function drawBomb(ctx, bomb) {
   ctx.fill();
 
   ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.lineWidth = Math.max(2, r * 0.035);
+  ctx.beginPath();
+  ctx.arc(0, r * 0.08, r * 0.76, -0.9, 2.3);
+  ctx.stroke();
+
   ctx.strokeStyle = '#05070a';
   ctx.lineWidth = Math.max(3, r * 0.08);
   ctx.beginPath();
   ctx.arc(0, r * 0.08, r * 0.92, 0, Math.PI * 2);
   ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  [-0.48, 0.48].forEach((x) => {
+    ctx.beginPath();
+    ctx.arc(r * x, r * 0.34, r * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
   ctx.beginPath();
@@ -483,6 +557,11 @@ function drawBomb(ctx, bomb) {
   ctx.roundRect(-r * 0.2, -r * 0.98, r * 0.4, r * 0.28, r * 0.08);
   ctx.fill();
   ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255, 226, 122, 0.34)';
+  ctx.beginPath();
+  ctx.roundRect(-r * 0.13, -r * 0.92, r * 0.26, r * 0.08, r * 0.03);
+  ctx.fill();
 
   ctx.strokeStyle = '#2f2115';
   ctx.lineWidth = Math.max(4, r * 0.1);
@@ -513,6 +592,10 @@ function drawBomb(ctx, bomb) {
   ctx.fillStyle = '#ff6b2f';
   ctx.beginPath();
   ctx.arc(r * 0.5, -r * 1.29, r * 0.11, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff7a8';
+  ctx.beginPath();
+  ctx.arc(r * 0.46, -r * 1.35, r * 0.055, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
