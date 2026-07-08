@@ -19,11 +19,8 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
             <p className="start-copy">
               Prepara tu mano y corta frutas con movimientos rapidos.
             </p>
-          </div>
-
-          <div className="quick-actions">
-            <label className="player-name-field">
-              <span>Jugador</span>
+            <label className="player-name-field player-name-field-hero">
+              <span>Nombre del jugador</span>
               <input
                 type="text"
                 placeholder="Ingresa tu nombre"
@@ -32,7 +29,9 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
                 maxLength={15}
               />
             </label>
+          </div>
 
+          <div className="quick-actions">
             <div className="mode-switch" role="group" aria-label="Modo de control">
               <button
                 className={inputMode === 'camera' ? 'mode-button mode-button-active' : 'mode-button'}

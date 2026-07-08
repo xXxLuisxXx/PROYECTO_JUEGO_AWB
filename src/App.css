@@ -659,6 +659,32 @@ h1 {
   margin: 20px 0 0;
 }
 
+.start-screen .player-name-field-hero {
+  width: min(420px, 100%);
+  margin: 24px 0 0;
+}
+
+.start-screen .player-name-field-hero span {
+  color: #ffe27a;
+}
+
+.start-screen .player-name-field-hero input {
+  height: 58px;
+  border-color: rgba(255, 226, 122, 0.58);
+  color: #ffffff;
+  background: rgba(255, 248, 216, 0.12);
+  font-size: 1.05rem;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.start-screen .player-name-field-hero input:focus {
+  outline: none;
+  border-color: rgba(139, 255, 117, 0.86);
+  box-shadow:
+    0 0 0 3px rgba(139, 255, 117, 0.16),
+    0 18px 38px rgba(0, 0, 0, 0.26);
+}
+
 .hero-panel {
   display: grid;
   grid-template-columns: 1fr minmax(260px, 320px);
