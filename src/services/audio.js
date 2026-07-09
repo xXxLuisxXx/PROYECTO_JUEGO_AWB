@@ -7,6 +7,9 @@ const SOUNDS = {
 
 const audioPools = new Map();
 let audioContext = null;
+let soundEnabled = localStorage.getItem('fruit-ninja-cam-sound') !== 'off';
+let musicTimer = 0;
+let musicStep = 0;
 
 function getAudioContext() {
   if (typeof window === 'undefined') {
@@ -36,6 +39,10 @@ function getVolume(name) {
 }
 
 function getPool(name) {
+  if (!SOUNDS[name]) {
+    return [];
+  }
+
   if (!audioPools.has(name)) {
     audioPools.set(
       name,
@@ -51,7 +58,23 @@ function getPool(name) {
   return audioPools.get(name);
 }
 
+export function isSoundEnabled() {
+  return soundEnabled;
+}
+
+export function setSoundEnabled(enabled) {
+  soundEnabled = enabled;
+  localStorage.setItem('fruit-ninja-cam-sound', enabled ? 'on' : 'off');
+  if (!enabled) {
+    stopBackgroundMusic();
+  }
+}
+
 export function unlockGameAudio() {
+  if (!soundEnabled) {
+    return;
+  }
+
   const context = getAudioContext();
   if (context) {
     context.resume().then(() => {
@@ -131,6 +154,10 @@ function playNoise({ duration, volume = 0.16 }) {
 }
 
 function playSynthSound(name) {
+  if (!soundEnabled) {
+    return true;
+  }
+
   if (name === 'slice') {
     return playTone({ frequency: 1800, endFrequency: 420, duration: 0.11, type: 'sawtooth', volume: 0.18 });
   }
@@ -141,6 +168,31 @@ function playSynthSound(name) {
       playTone({ frequency: 1220, endFrequency: 1720, duration: 0.14, type: 'triangle', volume: 0.14 });
     }, 70);
     return first;
+  }
+
+  if (name === 'levelup') {
+    const first = playTone({ frequency: 520, endFrequency: 920, duration: 0.16, type: 'triangle', volume: 0.14 });
+    window.setTimeout(() => playTone({ frequency: 780, endFrequency: 1320, duration: 0.18, type: 'triangle', volume: 0.14 }), 95);
+    window.setTimeout(() => playTone({ frequency: 1040, endFrequency: 1640, duration: 0.2, type: 'triangle', volume: 0.13 }), 190);
+    return first;
+  }
+
+  if (name === 'victory') {
+    [440, 660, 880, 1320].forEach((frequency, index) => {
+      window.setTimeout(() => {
+        playTone({ frequency, endFrequency: frequency * 1.3, duration: 0.24, type: 'triangle', volume: 0.13 });
+      }, index * 120);
+    });
+    return true;
+  }
+
+  if (name === 'record') {
+    [980, 1460, 1960].forEach((frequency, index) => {
+      window.setTimeout(() => {
+        playTone({ frequency, duration: 0.11, type: 'sine', volume: 0.12 });
+      }, index * 72);
+    });
+    return true;
   }
 
   if (name === 'explosion') {
@@ -161,8 +213,16 @@ function playSynthSound(name) {
 }
 
 export function playSound(name) {
+  if (!soundEnabled) {
+    return;
+  }
+
   const usedSynth = playSynthSound(name);
   const pool = getPool(name);
+  if (pool.length === 0) {
+    return;
+  }
+
   const audio = pool.find((item) => item.paused || item.ended) || pool[0];
 
   try {
@@ -174,5 +234,30 @@ export function playSound(name) {
   audio.volume = getVolume(name);
   if (!usedSynth) {
     audio.play().catch(() => {});
+  }
+}
+
+export function startBackgroundMusic() {
+  if (!soundEnabled || musicTimer) {
+    return;
+  }
+
+  const context = getAudioContext();
+  context?.resume().catch(() => {});
+  const notes = [196, 247, 294, 330, 294, 247, 220, 247];
+  musicTimer = window.setInterval(() => {
+    const frequency = notes[musicStep % notes.length];
+    musicStep += 1;
+    playTone({ frequency, duration: 0.28, type: 'sine', volume: 0.035 });
+    if (musicStep % 4 === 0) {
+      playTone({ frequency: frequency / 2, duration: 0.42, type: 'triangle', volume: 0.026 });
+    }
+  }, 420);
+}
+
+export function stopBackgroundMusic() {
+  if (musicTimer) {
+    window.clearInterval(musicTimer);
+    musicTimer = 0;
   }
 }

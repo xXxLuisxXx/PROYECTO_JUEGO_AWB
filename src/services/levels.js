@@ -6,9 +6,11 @@ export const LEVELS = [
   return {
     level,
     target,
-    spawnDelay: Math.max(500, 980 - index * 52),
-    fruitSpeed: 1 + index * 0.06,
-    bombChance: Math.min(0.2, 0.07 + index * 0.01),
+    spawnDelay: Math.max(360, 900 - index * 58),
+    fruitSpeed: 1 + index * 0.085,
+    gravityScale: 1 + index * 0.025,
+    maxActiveFruits: Math.min(8, 3 + Math.floor(index / 2)),
+    bombChance: Math.min(0.28, 0.05 + index * 0.018),
   };
 });
 

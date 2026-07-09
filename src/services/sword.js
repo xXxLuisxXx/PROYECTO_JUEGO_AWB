@@ -1,84 +1,37 @@
 export const WEAPON_LOADOUTS = {
-  axe: {
-    id: 'axe',
-    label: 'Hacha solar',
-    spriteUrl: '/assets/axe.svg',
-    screenWidthRatio: 0.16,
-    minWidth: 118,
-    maxWidth: 220,
-    aspectRatio: 2.67,
-    drawOffset: 0.72,
-    trailLength: 9,
-    smoothing: 0.68,
-    power: 1.15,
-  },
-  sword: {
-    id: 'sword',
-    label: 'Espada ninja',
-    spriteUrl: '/assets/sword.svg',
-    screenWidthRatio: 0.18,
-    minWidth: 130,
-    maxWidth: 260,
-    aspectRatio: 4,
-    drawOffset: 0.86,
-    trailLength: 11,
-    smoothing: 0.7,
-    power: 1,
-  },
-  plasma: {
-    id: 'plasma',
-    label: 'Filo de plasma',
+  lightning: {
+    id: 'lightning',
+    label: 'Rayo electrico',
     spriteUrl: null,
-    screenWidthRatio: 0.17,
-    minWidth: 128,
-    maxWidth: 240,
-    aspectRatio: 4.8,
-    drawOffset: 0.78,
-    trailLength: 14,
-    smoothing: 0.72,
-    power: 1.25,
+    screenWidthRatio: 0.12,
+    minWidth: 86,
+    maxWidth: 180,
+    aspectRatio: 5.2,
+    drawOffset: 0.5,
+    trailLength: 18,
+    smoothing: 0.78,
+    power: 1.08,
   },
 };
 
 export const ENERGY_THEMES = {
-  frost: {
-    id: 'frost',
-    label: 'Orbe glacial',
-    color: '#79f2ff',
+  storm: {
+    id: 'storm',
+    label: 'Rayo azul',
+    color: '#20d7ff',
     core: '#ffffff',
-    dark: '#1f8fe8',
-  },
-  jungle: {
-    id: 'jungle',
-    label: 'Aura selva',
-    color: '#8bff75',
-    core: '#f2ffe5',
-    dark: '#20b85d',
-  },
-  ember: {
-    id: 'ember',
-    label: 'Fuego mango',
-    color: '#ffdc5f',
-    core: '#fff8d8',
-    dark: '#ff6b57',
-  },
-  berry: {
-    id: 'berry',
-    label: 'Pulso mora',
-    color: '#caa6ff',
-    core: '#ffffff',
-    dark: '#8d63f7',
+    dark: '#145cff',
   },
 };
 
-export const SWORD_CONFIG = WEAPON_LOADOUTS.axe;
+export const SWORD_CONFIG = WEAPON_LOADOUTS.lightning;
 
-export function getWeaponLoadout(id = 'axe') {
-  return WEAPON_LOADOUTS[id] || WEAPON_LOADOUTS.axe;
+export function getWeaponLoadout(id = 'lightning') {
+  return WEAPON_LOADOUTS[id] || WEAPON_LOADOUTS.lightning;
 }
 
-export function getEnergyTheme(id = 'frost') {
-  return ENERGY_THEMES[id] || ENERGY_THEMES.frost;
+export function getEnergyTheme(id = 'storm') {
+  return ENERGY_THEMES[id] || ENERGY_THEMES.storm;
 }
 
 export function createSwordState() {
@@ -90,20 +43,15 @@ export function createSwordState() {
     tipX: 0,
     tipY: 0,
     angle: 0,
+    speed: 0,
     hasPoint: false,
   };
-}
-
-export function getSwordSize(width, weapon = SWORD_CONFIG) {
-  return Math.max(
-    weapon.minWidth,
-    Math.min(weapon.maxWidth, width * weapon.screenWidthRatio),
-  );
 }
 
 export function updateSword(sword, rawPoint, width, height, weapon = SWORD_CONFIG) {
   if (!rawPoint) {
     sword.hasPoint = false;
+    sword.speed *= 0.82;
     return sword;
   }
 
@@ -117,6 +65,7 @@ export function updateSword(sword, rawPoint, width, height, weapon = SWORD_CONFI
     sword.tipY = targetY;
     sword.previousTipX = targetX;
     sword.previousTipY = targetY;
+    sword.speed = 0;
     sword.hasPoint = true;
     return sword;
   }
@@ -128,8 +77,9 @@ export function updateSword(sword, rawPoint, width, height, weapon = SWORD_CONFI
   const dy = targetY - sword.y;
   sword.x += dx * weapon.smoothing;
   sword.y += dy * weapon.smoothing;
+  sword.speed = Math.hypot(sword.x - sword.previousTipX, sword.y - sword.previousTipY);
 
-  if (Math.hypot(dx, dy) > 1.2) {
+  if (Math.hypot(dx, dy) > 0.8) {
     sword.angle = Math.atan2(dy, dx);
   }
 
@@ -138,37 +88,31 @@ export function updateSword(sword, rawPoint, width, height, weapon = SWORD_CONFI
   return sword;
 }
 
-export function drawSword(ctx, sword, image, width, weapon = SWORD_CONFIG, energy = ENERGY_THEMES.frost) {
+export function drawSword(ctx, sword, image, width, weapon = SWORD_CONFIG, energy = ENERGY_THEMES.storm) {
   if (!sword.hasPoint) {
     return;
   }
 
-  const swordWidth = getSwordSize(width, weapon);
-  const swordHeight = swordWidth / weapon.aspectRatio;
+  const pulse = Math.min(1, sword.speed / Math.max(26, width * 0.03));
+  const radius = 6 + pulse * 9;
 
   ctx.save();
   ctx.translate(sword.x, sword.y);
-  ctx.rotate(sword.angle);
   ctx.shadowColor = energy.color;
-  ctx.shadowBlur = 18;
+  ctx.shadowBlur = 26 + pulse * 22;
 
-  if (image?.complete) {
-    ctx.drawImage(image, -swordWidth * weapon.drawOffset, -swordHeight / 2, swordWidth, swordHeight);
-  } else {
-    const gradient = ctx.createLinearGradient(-swordWidth * weapon.drawOffset, 0, swordWidth * 0.22, 0);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    gradient.addColorStop(0.34, energy.dark);
-    gradient.addColorStop(0.72, energy.color);
-    gradient.addColorStop(1, energy.core);
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.roundRect(-swordWidth * weapon.drawOffset, -swordHeight * 0.22, swordWidth, swordHeight * 0.44, swordHeight * 0.22);
-    ctx.fill();
-    ctx.fillStyle = energy.core;
-    ctx.beginPath();
-    ctx.arc(swordWidth * 0.2, 0, swordHeight * 0.28, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius * 3.4);
+  glow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  glow.addColorStop(0.28, 'rgba(32, 215, 255, 0.78)');
+  glow.addColorStop(1, 'rgba(20, 92, 255, 0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 3.4, 0, Math.PI * 2);
+  ctx.fill();
 
+  ctx.fillStyle = energy.core;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }

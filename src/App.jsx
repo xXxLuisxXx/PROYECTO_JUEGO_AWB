@@ -6,13 +6,20 @@ import GameOver from './components/GameOver.jsx';
 import ScoreBoard from './components/ScoreBoard.jsx';
 import StartScreen from './components/StartScreen.jsx';
 import useHandTracking from './hooks/useHandTracking.js';
+import { isSoundEnabled, playSound, setSoundEnabled, startBackgroundMusic, stopBackgroundMusic } from './services/audio.js';
 import { getLevelConfig } from './services/levels.js';
 
 const RECORD_KEY = 'fruit-ninja-cam-record';
-const RANKINGS_KEY = 'fruit-ninja-cam-rankings';
-const EMPTY_RANKINGS = {
-  camera: [],
-  mouse: [],
+const RANKINGS_KEY = 'fruit-ninja-cam-global-ranking';
+const LEGACY_RANKINGS_KEY = 'fruit-ninja-cam-rankings';
+const STATS_KEY = 'fruit-ninja-cam-global-stats';
+const PLAYER_KEY = 'fruit-ninja-cam-last-player';
+const EMPTY_STATS = {
+  gamesPlayed: 0,
+  fruitsSliced: 0,
+  bombsHit: 0,
+  timePlayedMs: 0,
+  maxLevelReached: 1,
 };
 const MAX_RANKING_ENTRIES = 50;
 const MAX_LIVES = 3;
@@ -25,12 +32,15 @@ function normalizePlayerName(name) {
 function loadRankings() {
   try {
     const stored = JSON.parse(localStorage.getItem(RANKINGS_KEY) || 'null');
-    return {
-      camera: Array.isArray(stored?.camera) ? trimScores(stored.camera.filter((entry) => entry.score > 0)) : [],
-      mouse: Array.isArray(stored?.mouse) ? trimScores(stored.mouse.filter((entry) => entry.score > 0)) : [],
-    };
+    if (Array.isArray(stored)) {
+      return trimScores(stored.filter((entry) => entry.score > 0));
+    }
+
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_RANKINGS_KEY) || 'null');
+    const legacyScores = [...(legacy?.camera || []), ...(legacy?.mouse || [])];
+    return mergePlayerScores(legacyScores);
   } catch {
-    return EMPTY_RANKINGS;
+    return [];
   }
 }
 
@@ -38,28 +48,62 @@ function trimScores(scores) {
   return [...scores].sort((a, b) => b.score - a.score).slice(0, MAX_RANKING_ENTRIES);
 }
 
-function getBestScore(rankings) {
-  return Math.max(0, ...Object.values(rankings).flat().map((entry) => entry.score));
+function mergePlayerScores(scores) {
+  const byPlayer = new Map();
+
+  scores.forEach((entry) => {
+    const name = normalizePlayerName(entry.name || '');
+    const key = name.toLocaleLowerCase();
+    const current = byPlayer.get(key);
+    const nextEntry = {
+      name,
+      score: Number(entry.score || 0),
+      date: entry.date || new Date().toISOString(),
+      level: Number(entry.level || 1),
+      fruitsSliced: Number(entry.fruitsSliced || entry.fruits || 0),
+      bombsHit: Number(entry.bombsHit || entry.bombs || 0),
+    };
+
+    if (!current || nextEntry.score > current.score) {
+      byPlayer.set(key, nextEntry);
+    }
+  });
+
+  return trimScores([...byPlayer.values()]);
+}
+
+function loadStats() {
+  try {
+    return { ...EMPTY_STATS, ...JSON.parse(localStorage.getItem(STATS_KEY) || 'null') };
+  } catch {
+    return EMPTY_STATS;
+  }
 }
 
 export default function App() {
   const videoRef = useRef(null);
   const endedRef = useRef(false);
+  const gameStartedAtRef = useRef(0);
+  const runStatsRef = useRef({ level: 1, fruitsSliced: 0, bombsHit: 0 });
   const [status, setStatus] = useState('start');
   const [inputMode, setInputMode] = useState('camera');
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem(PLAYER_KEY) || '');
   const [startLevel, setStartLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [record, setRecord] = useState(() => Number(localStorage.getItem(RECORD_KEY) || 0));
   const [rankings, setRankings] = useState(loadRankings);
   const [totalFruits, setTotalFruits] = useState(0);
+  const [stats, setStats] = useState(loadStats);
+  const [soundOn, setSoundOn] = useState(isSoundEnabled);
   const [levelStats, setLevelStats] = useState({
     level: 1,
     fruits: 0,
     target: 10,
     totalFruits: 0,
     fps: 0,
+    combo: 0,
+    multiplier: 1,
   });
 
   const isPlaying = status === 'playing';
@@ -78,7 +122,10 @@ export default function App() {
     const initialLevelConfig = getLevelConfig(nextStartLevel);
 
     endedRef.current = false;
+    gameStartedAtRef.current = performance.now();
+    runStatsRef.current = { level: nextStartLevel, fruitsSliced: 0, bombsHit: 0 };
     setPlayerName(normalizePlayerName(nextPlayerName));
+    localStorage.setItem(PLAYER_KEY, normalizePlayerName(nextPlayerName));
     setStartLevel(nextStartLevel);
     setScore(0);
     setLives(MAX_LIVES);
@@ -89,6 +136,8 @@ export default function App() {
       target: initialLevelConfig.target,
       totalFruits: 0,
       fps: 0,
+      combo: 0,
+      multiplier: 1,
     });
     setStatus('playing');
   }, [playerName, startLevel]);
@@ -102,80 +151,113 @@ export default function App() {
     setStatus((current) => (current === 'paused' ? 'playing' : 'paused'));
   }, []);
 
-  const saveRanking = useCallback((finalScore) => {
-    if (finalScore <= 0) {
-      return;
-    }
+  const toggleSound = useCallback(() => {
+    setSoundOn((current) => {
+      const next = !current;
+      setSoundEnabled(next);
+      if (next && status === 'playing') {
+        startBackgroundMusic();
+      }
+      return next;
+    });
+  }, [status]);
 
+  const saveRanking = useCallback((finalScore, finalStats = runStatsRef.current) => {
     setRankings((currentRankings) => {
-      const nextRankings = {
-        ...EMPTY_RANKINGS,
-        ...currentRankings,
-        [inputMode]: trimScores([
-          ...(currentRankings[inputMode] || []),
-          {
-            name: normalizePlayerName(playerName),
-            score: finalScore,
-            date: new Date().toISOString(),
-          },
-        ]),
+      const playerEntry = {
+        name: normalizePlayerName(playerName),
+        score: Math.max(0, finalScore),
+        date: new Date().toISOString(),
+        level: finalStats.level,
+        fruitsSliced: finalStats.fruitsSliced,
+        bombsHit: finalStats.bombsHit,
       };
+      const nextRankings = mergePlayerScores([...currentRankings, playerEntry]);
       localStorage.setItem(RANKINGS_KEY, JSON.stringify(nextRankings));
       return nextRankings;
     });
-  }, [inputMode, playerName]);
+  }, [playerName]);
 
   const saveRecord = useCallback((finalScore) => {
     setRecord((currentRecord) => {
       const nextRecord = Math.max(currentRecord, finalScore);
+      if (finalScore > currentRecord) {
+        playSound('record');
+      }
       localStorage.setItem(RECORD_KEY, String(nextRecord));
       return nextRecord;
     });
   }, []);
 
-  const clearRanking = useCallback((mode) => {
-    setRankings((currentRankings) => {
-      const nextRankings = {
-        ...EMPTY_RANKINGS,
-        ...currentRankings,
-        [mode]: [],
+  const clearRanking = useCallback(() => {
+    if (!window.confirm('Seguro que quieres borrar todo el ranking local?')) {
+      return;
+    }
+
+    setRankings([]);
+    localStorage.setItem(RANKINGS_KEY, JSON.stringify([]));
+    localStorage.setItem(RECORD_KEY, '0');
+    setRecord(0);
+  }, []);
+
+  const persistStats = useCallback((finalStats = runStatsRef.current) => {
+    const elapsed = gameStartedAtRef.current ? performance.now() - gameStartedAtRef.current : 0;
+    setStats((currentStats) => {
+      const nextStats = {
+        ...currentStats,
+        gamesPlayed: currentStats.gamesPlayed + 1,
+        fruitsSliced: currentStats.fruitsSliced + finalStats.fruitsSliced,
+        bombsHit: currentStats.bombsHit + finalStats.bombsHit,
+        timePlayedMs: currentStats.timePlayedMs + elapsed,
+        maxLevelReached: Math.max(currentStats.maxLevelReached, finalStats.level),
       };
-      const nextRecord = getBestScore(nextRankings);
-      localStorage.setItem(RANKINGS_KEY, JSON.stringify(nextRankings));
-      localStorage.setItem(RECORD_KEY, String(nextRecord));
-      setRecord(nextRecord);
-      return nextRankings;
+      localStorage.setItem(STATS_KEY, JSON.stringify(nextStats));
+      return nextStats;
     });
   }, []);
 
-  const finishGame = useCallback((finalScore = score) => {
+  const finishGame = useCallback((payload = score) => {
     if (endedRef.current) {
       return;
     }
 
+    const finalScore = typeof payload === 'object' ? payload.score : payload;
+    const finalStats = typeof payload === 'object' ? payload.stats : runStatsRef.current;
     endedRef.current = true;
     setScore(finalScore);
+    setTotalFruits(finalStats.fruitsSliced);
     setStatus('gameover');
     saveRecord(finalScore);
-    saveRanking(finalScore);
-  }, [saveRanking, saveRecord, score]);
+    saveRanking(finalScore, finalStats);
+    persistStats(finalStats);
+  }, [persistStats, saveRanking, saveRecord, score]);
 
-  const finishVictory = useCallback(({ score: finalScore, totalFruits: finalTotalFruits }) => {
+  const finishVictory = useCallback(({ score: finalScore, totalFruits: finalTotalFruits, stats: finalStats }) => {
     if (endedRef.current) {
       return;
     }
 
+    const normalizedStats = finalStats || {
+      ...runStatsRef.current,
+      fruitsSliced: finalTotalFruits,
+    };
     endedRef.current = true;
     setScore(finalScore);
     setTotalFruits(finalTotalFruits);
     setStatus('victory');
     saveRecord(finalScore);
-    saveRanking(finalScore);
-  }, [saveRanking, saveRecord]);
+    saveRanking(finalScore, normalizedStats);
+    persistStats(normalizedStats);
+  }, [persistStats, saveRanking, saveRecord]);
 
   const updateLevelStats = useCallback((nextStats) => {
     setLevelStats(nextStats);
     setTotalFruits(nextStats.totalFruits);
+    runStatsRef.current = {
+      level: nextStats.level,
+      fruitsSliced: nextStats.totalFruits,
+      bombsHit: nextStats.bombsHit || runStatsRef.current.bombsHit,
+    };
   }, []);
 
   const addScore = useCallback((points) => {
@@ -196,6 +278,16 @@ export default function App() {
     }
   }, [finishGame, isPlaying, lives, score]);
 
+  useEffect(() => {
+    if (status === 'playing' && soundOn) {
+      startBackgroundMusic();
+    } else {
+      stopBackgroundMusic();
+    }
+
+    return () => stopBackgroundMusic();
+  }, [soundOn, status]);
+
   const gameState = useMemo(
     () => ({
       score,
@@ -213,6 +305,7 @@ export default function App() {
         <StartScreen
           inputMode={inputMode}
           rankings={rankings}
+          stats={stats}
           onClearRanking={clearRanking}
           onModeChange={setInputMode}
           onStart={startGame}
@@ -226,11 +319,14 @@ export default function App() {
             lives={lives}
             record={gameState.record}
             levelStats={levelStats}
+            playerName={playerName}
           />
 
           <GameControls
             paused={isPaused}
+            soundEnabled={soundOn}
             onPauseToggle={togglePause}
+            onSoundToggle={toggleSound}
             onHome={goHome}
           />
 
@@ -264,6 +360,7 @@ export default function App() {
           type="gameover"
           rankings={rankings}
           inputMode={inputMode}
+          stats={stats}
           onClearRanking={clearRanking}
           onRestart={startGame}
           onHome={goHome}
@@ -278,6 +375,7 @@ export default function App() {
           type="victory"
           rankings={rankings}
           inputMode={inputMode}
+          stats={stats}
           onClearRanking={clearRanking}
           onRestart={startGame}
           onHome={goHome}

@@ -18,6 +18,7 @@ const MAX_IMPACT_RINGS = 14;
 const MAX_FLOATING_TEXTS = 12;
 const MAX_SPRITE_CACHE_SIZE = 96;
 const COMBO_WINDOW_MS = 1000;
+const LEVEL_COMPLETE_HOLD_MS = 1500;
 const fruitSpriteCache = new Map();
 
 function resizeCanvas(canvas) {
@@ -49,14 +50,38 @@ function createParticles(x, y, color, amount = 14, explosive = false) {
   });
 }
 
-function createCutSlash(start, end) {
+function createElectricParticles(x, y, amount = 24, explosive = false) {
+  return Array.from({ length: amount }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (explosive ? 3.4 : 1.8) + Math.random() * (explosive ? 7 : 4);
+
+    return {
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.032 + Math.random() * 0.034,
+      size: explosive ? 2.5 + Math.random() * 4.5 : 1.4 + Math.random() * 3,
+      color: Math.random() > 0.45 ? '#20d7ff' : '#ffffff',
+      explosive,
+    };
+  });
+}
+
+function createCutSlash(start, end, critical = false) {
   return {
     x1: start.x,
     y1: start.y,
     x2: end.x,
     y2: end.y,
     life: 1,
-    width: 7,
+    width: critical ? 13 : 8,
+    branches: Array.from({ length: critical ? 5 : 3 }, () => ({
+      offset: 0.22 + Math.random() * 0.62,
+      length: 18 + Math.random() * (critical ? 42 : 28),
+      angle: (Math.random() - 0.5) * 1.9,
+    })),
   };
 }
 
@@ -623,21 +648,52 @@ function drawHalf(ctx, half) {
 }
 
 function drawTrail(ctx, trail, energy) {
+  if (trail.length < 2) {
+    return;
+  }
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    ctx.beginPath();
+    trail.forEach((point, index) => {
+      if (index === 0) {
+        ctx.moveTo(point.x, point.y);
+      } else {
+        const previous = trail[index - 1];
+        const cx = (previous.x + point.x) / 2;
+        const cy = (previous.y + point.y) / 2;
+        ctx.quadraticCurveTo(previous.x, previous.y, cx, cy);
+      }
+    });
+
+    ctx.globalAlpha = pass === 0 ? 0.22 : pass === 1 ? 0.68 : 0.96;
+    ctx.strokeStyle = pass === 2 ? energy.core : energy.color;
+    ctx.lineWidth = pass === 0 ? 28 : pass === 1 ? 12 : 3.4;
+    ctx.shadowColor = pass === 2 ? energy.core : energy.color;
+    ctx.shadowBlur = pass === 0 ? 34 : 22;
+    ctx.stroke();
+  }
+
   for (let i = 1; i < trail.length; i += 1) {
     const previous = trail[i - 1];
     const point = trail[i];
-    const alpha = point.life * (i / trail.length);
-    ctx.strokeStyle = `${energy.color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
-    ctx.lineWidth = 5 + i * 0.42;
-    ctx.lineCap = 'round';
+    const alpha = point.life * 0.55 * (i / trail.length);
+    const jitter = Math.sin((point.age || 0) + i * 2.4) * 8;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = i % 2 ? energy.core : energy.dark;
+    ctx.lineWidth = 1.2 + i * 0.08;
     ctx.shadowColor = energy.color;
-    ctx.shadowBlur = 11;
+    ctx.shadowBlur = 16;
     ctx.beginPath();
     ctx.moveTo(previous.x, previous.y);
-    ctx.lineTo(point.x, point.y);
+    ctx.lineTo(point.x + jitter, point.y - jitter * 0.55);
     ctx.stroke();
   }
-  ctx.shadowBlur = 0;
+
+  ctx.restore();
 }
 
 function drawParticles(ctx, particles) {
@@ -655,18 +711,30 @@ function drawSlashes(ctx, slashes) {
   slashes.forEach((slash) => {
     ctx.globalAlpha = slash.life;
     const gradient = ctx.createLinearGradient(slash.x1, slash.y1, slash.x2, slash.y2);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    gradient.addColorStop(0.45, '#ffffff');
-    gradient.addColorStop(1, '#ffdc5f');
+    gradient.addColorStop(0, 'rgba(32, 215, 255, 0)');
+    gradient.addColorStop(0.38, '#ffffff');
+    gradient.addColorStop(0.6, '#20d7ff');
+    gradient.addColorStop(1, 'rgba(20, 92, 255, 0)');
     ctx.strokeStyle = gradient;
     ctx.lineWidth = slash.width * slash.life;
     ctx.lineCap = 'round';
-    ctx.shadowColor = '#ffdc5f';
-    ctx.shadowBlur = 22;
+    ctx.shadowColor = '#20d7ff';
+    ctx.shadowBlur = 30;
     ctx.beginPath();
     ctx.moveTo(slash.x1, slash.y1);
     ctx.lineTo(slash.x2, slash.y2);
     ctx.stroke();
+
+    slash.branches.forEach((branch) => {
+      const x = slash.x1 + (slash.x2 - slash.x1) * branch.offset;
+      const y = slash.y1 + (slash.y2 - slash.y1) * branch.offset;
+      const angle = Math.atan2(slash.y2 - slash.y1, slash.x2 - slash.x1) + branch.angle;
+      ctx.lineWidth = Math.max(1, slash.width * 0.22 * slash.life);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(angle) * branch.length * slash.life, y + Math.sin(angle) * branch.length * slash.life);
+      ctx.stroke();
+    });
   });
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
@@ -711,8 +779,8 @@ export default function GameCanvas({
   isInputReady,
   inputStatus,
   startLevel = 1,
-  weaponSkin = 'axe',
-  energyTheme = 'frost',
+  weaponSkin = 'lightning',
+  energyTheme = 'storm',
   paused,
   onScore,
   onLoseLife,
@@ -742,6 +810,9 @@ export default function GameCanvas({
   const lastSpawnRef = useRef(0);
   const lastSliceTimeRef = useRef(0);
   const comboRef = useRef(0);
+  const maxComboRef = useRef(0);
+  const bombsHitRef = useRef(0);
+  const slowMotionRef = useRef(0);
   const shakeRef = useRef(0);
   const scoreRef = useRef(0);
   const lostLivesRef = useRef(0);
@@ -805,9 +876,12 @@ export default function GameCanvas({
       level: startLevel,
       target: initialLevelConfig.target,
       fruits: 0,
-      totalFruits: 0,
-      fps: 0,
-    });
+        totalFruits: 0,
+        fps: 0,
+        combo: 0,
+        multiplier: 1,
+        bombsHit: 0,
+      });
 
     function updateFps(now) {
       const fps = fpsRef.current;
@@ -829,15 +903,28 @@ export default function GameCanvas({
         fruits: levelFruitCountRef.current,
         totalFruits: totalFruitCountRef.current,
         fps: fpsRef.current.value,
+        combo: comboRef.current,
+        multiplier: Math.min(5, Math.max(1, Math.floor(comboRef.current / 2) + 1)),
+        bombsHit: bombsHitRef.current,
       });
+    }
+
+    function getRoundStats() {
+      return {
+        level: levelRef.current,
+        fruitsSliced: totalFruitCountRef.current,
+        bombsHit: bombsHitRef.current,
+        maxCombo: maxComboRef.current,
+      };
     }
 
     function completeLevel() {
       if (levelRef.current >= MAX_LEVEL) {
-        playSound('gameover');
+        playSound('victory');
         callbacksRef.current.onVictory({
           score: scoreRef.current,
           totalFruits: totalFruitCountRef.current,
+          stats: getRoundStats(),
         });
         stopped = true;
         return;
@@ -851,10 +938,11 @@ export default function GameCanvas({
       levelFruitCountRef.current = 0;
       fruitsRef.current = [];
       levelMessageRef.current = {
-        text: 'Nivel Completado',
+        text: 'LEVEL COMPLETE',
         level: levelRef.current,
-        until: performance.now() + 1500,
+        until: performance.now() + LEVEL_COMPLETE_HOLD_MS,
       };
+      playSound('levelup');
       publishStats();
     }
 
@@ -863,7 +951,8 @@ export default function GameCanvas({
         return;
       }
 
-      const delta = Math.min(32, now - lastTime) / 16.67;
+      const slowMotion = slowMotionRef.current > now ? 0.48 : 1;
+      const delta = (Math.min(32, now - lastTime) / 16.67) * slowMotion;
       lastTime = now;
       const fpsChanged = updateFps(now);
 
@@ -919,7 +1008,13 @@ export default function GameCanvas({
         return;
       }
 
-      if (shouldSpawnFruit(lastSpawnRef.current, now, levelConfig)) {
+      const levelMessageActive = levelMessageRef.current && now < levelMessageRef.current.until;
+
+      if (
+        !levelMessageActive
+        && fruitsRef.current.length < levelConfig.maxActiveFruits
+        && shouldSpawnFruit(lastSpawnRef.current, now, levelConfig)
+      ) {
         fruitsRef.current.push(createFruit(width, height, levelConfig));
         lastSpawnRef.current = now;
       }
@@ -930,7 +1025,7 @@ export default function GameCanvas({
       const currentTip = { x: sword.tipX, y: sword.tipY };
 
       if (sword.hasPoint) {
-        trailRef.current.push({ x: currentTip.x, y: currentTip.y, life: 1 });
+        trailRef.current.push({ x: currentTip.x, y: currentTip.y, life: 1, age: now * 0.02 });
         if (trailRef.current.length > weapon.trailLength) {
           trailRef.current.shift();
         }
@@ -947,17 +1042,20 @@ export default function GameCanvas({
         const fruit = fruitsRef.current[i];
         fruit.x += fruit.velocityX * delta;
         fruit.y += fruit.velocityY * delta;
-        fruit.velocityY += GRAVITY * delta;
+        fruit.velocityY += GRAVITY * (levelConfig.gravityScale || 1) * delta;
         fruit.rotation += fruit.spin * delta;
 
         const hit = sword.hasPoint && segmentIntersectsCircle(previousTip, currentTip, fruit);
         if (hit && !fruit.sliced) {
           fruit.sliced = true;
           fruitsRef.current.splice(i, 1);
-          slashesRef.current.push(createCutSlash(previousTip, currentTip));
+          const sliceSpeed = Math.hypot(currentTip.x - previousTip.x, currentTip.y - previousTip.y);
+          const critical = sliceSpeed > Math.max(32, fruit.radius * 0.92);
+          slashesRef.current.push(createCutSlash(previousTip, currentTip, critical));
 
           if (fruit.type === 'bomb') {
             comboRef.current = 0;
+            bombsHitRef.current += 1;
             callbacksRef.current.onLoseLife();
             lostLivesRef.current += 1;
             playSound('explosion');
@@ -965,32 +1063,49 @@ export default function GameCanvas({
             impactRingsRef.current.push(createImpactRing(fruit.x, fruit.y, '#ff6537', true));
             floatingTextsRef.current.push(createFloatingText(fruit.x, fruit.y - 18, '- VIDA', '#ff6537'));
             particlesRef.current.push(...createParticles(fruit.x, fruit.y, '#ff6537', 28, true));
+            particlesRef.current.push(...createElectricParticles(fruit.x, fruit.y, 18, true));
+            publishStats();
             if (lostLivesRef.current >= 3) {
               playSound('gameover');
-              callbacksRef.current.onGameOver(scoreRef.current);
+              callbacksRef.current.onGameOver({ score: scoreRef.current, stats: getRoundStats() });
               stopped = true;
             }
           } else {
             const fruitConfig = FRUIT_TYPES[fruit.type];
             comboRef.current = now - lastSliceTimeRef.current <= COMBO_WINDOW_MS ? comboRef.current + 1 : 1;
+            maxComboRef.current = Math.max(maxComboRef.current, comboRef.current);
             lastSliceTimeRef.current = now;
-            const comboBonus = comboRef.current >= 3 ? (comboRef.current - 2) * 5 : 0;
-            const earnedPoints = Math.round((fruitConfig.points + comboBonus) * weapon.power);
+            const multiplier = Math.min(5, Math.max(1, Math.floor(comboRef.current / 2) + 1));
+            const comboBonus = comboRef.current >= 3 ? (comboRef.current - 2) * 8 : 0;
+            const precisionBonus = critical ? 18 : sliceSpeed > fruit.radius * 0.55 ? 8 : 0;
+            const earnedPoints = Math.round((fruitConfig.points + comboBonus + precisionBonus) * weapon.power * multiplier);
             scoreRef.current += earnedPoints;
             levelFruitCountRef.current += 1;
             totalFruitCountRef.current += 1;
             callbacksRef.current.onScore(earnedPoints);
             playSound(comboRef.current >= 3 ? 'combo' : 'slice');
-            shakeRef.current = Math.max(shakeRef.current, comboRef.current >= 3 ? 7 : 4);
+            if (comboRef.current >= 5) {
+              slowMotionRef.current = now + 420;
+            }
+            shakeRef.current = Math.max(shakeRef.current, comboRef.current >= 3 ? 9 : 4);
             halvesRef.current.push(...createHalves(fruit));
-            impactRingsRef.current.push(createImpactRing(fruit.x, fruit.y, energy.color));
+            impactRingsRef.current.push(createImpactRing(fruit.x, fruit.y, energy.color, comboRef.current >= 5));
             floatingTextsRef.current.push(createFloatingText(
               fruit.x,
               fruit.y - fruit.radius,
-              comboRef.current >= 3 ? `+${earnedPoints} COMBO x${comboRef.current}` : `+${earnedPoints}`,
-              comboRef.current >= 3 ? '#ffdc5f' : '#ffffff',
+              comboRef.current >= 5
+                ? `+${earnedPoints} COMBO BONUS x${comboRef.current}`
+                : critical
+                  ? `+${earnedPoints} CRITICAL SLICE`
+                  : sliceSpeed > fruit.radius * 0.55
+                    ? `+${earnedPoints} PERFECT SLICE`
+                    : comboRef.current >= 3
+                      ? `+${earnedPoints} COMBO x${comboRef.current}`
+                      : `+${earnedPoints}`,
+              comboRef.current >= 3 ? '#79f2ff' : '#ffffff',
             ));
             particlesRef.current.push(...createParticles(fruit.x, fruit.y, fruitConfig.splash, comboRef.current >= 3 ? 18 : 12));
+            particlesRef.current.push(...createElectricParticles(fruit.x, fruit.y, comboRef.current >= 5 ? 34 : 18, comboRef.current >= 5));
             publishStats();
 
             if (levelFruitCountRef.current >= levelConfig.target) {
@@ -1006,7 +1121,7 @@ export default function GameCanvas({
             floatingTextsRef.current.push(createFloatingText(fruit.x, Math.min(height - 60, fruit.y), 'PERDISTE UNA', '#ff5365'));
             if (lostLivesRef.current >= 3) {
               playSound('gameover');
-              callbacksRef.current.onGameOver(scoreRef.current);
+              callbacksRef.current.onGameOver({ score: scoreRef.current, stats: getRoundStats() });
               stopped = true;
             }
           }
@@ -1109,6 +1224,9 @@ export default function GameCanvas({
       scoreRef.current = 0;
       lostLivesRef.current = 0;
       comboRef.current = 0;
+      maxComboRef.current = 0;
+      bombsHitRef.current = 0;
+      slowMotionRef.current = 0;
       lastSliceTimeRef.current = 0;
       shakeRef.current = 0;
       levelRef.current = startLevel;

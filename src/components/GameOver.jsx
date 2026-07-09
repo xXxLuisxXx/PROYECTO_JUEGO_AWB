@@ -7,7 +7,7 @@ export default function GameOver({
   totalFruits = 0,
   type = 'gameover',
   rankings,
-  inputMode,
+  stats,
   onClearRanking,
   onRestart,
   onHome,
@@ -17,7 +17,7 @@ export default function GameOver({
   return (
     <section className="screen-layer game-over-screen">
       <div className="game-over-panel">
-        <p className="eyebrow">{isVictory ? 'Nivel 15 completado' : 'Fin de partida'}</p>
+        <p className="eyebrow">{isVictory ? 'Nivel 10 completado' : 'Fin de partida'}</p>
         <h1>{isVictory ? 'VICTORIA' : 'GAME OVER'}</h1>
         <div className="final-stats">
           <span>PUNTOS: {String(score).padStart(4, '0')}</span>
@@ -34,7 +34,7 @@ export default function GameOver({
             INICIO
           </button>
         </div>
-        <RankingBoard rankings={rankings} activeMode={inputMode} onClear={onClearRanking} />
+        <RankingBoard rankings={rankings} stats={stats} onClear={onClearRanking} />
       </div>
     </section>
   );

@@ -1,68 +1,80 @@
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-const MODE_LABELS = {
-  camera: 'Cámara',
-  mouse: 'Mouse',
-};
-const COLLAPSED_LIMIT = 3;
+function formatDate(value) {
+  if (!value) {
+    return '--';
+  }
 
-export default function RankingBoard({ rankings, activeMode = 'camera', onClear }) {
-  const [expanded, setExpanded] = useState(false);
-  const scores = rankings?.[activeMode] || [];
-  const visibleScores = expanded ? scores : scores.slice(0, COLLAPSED_LIMIT);
-  const canToggle = scores.length > COLLAPSED_LIMIT;
+  return new Intl.DateTimeFormat('es', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function getPosition(index) {
+  return `${index + 1}.`;
+}
+
+export default function RankingBoard({ rankings = [], onClear, stats }) {
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const scores = rankings.filter((entry) => entry.name.toLocaleLowerCase().includes(normalizedQuery));
 
   return (
-    <section
-      className={expanded ? 'ranking-board ranking-board-expanded' : 'ranking-board'}
-      aria-label={`Ranking ${MODE_LABELS[activeMode]}`}
-    >
+    <section className="ranking-board ranking-board-expanded" aria-label="Ranking global local">
       <div className="ranking-title">
         <span>RANKING</span>
-        <strong>{MODE_LABELS[activeMode]}</strong>
+        <strong>Global local</strong>
       </div>
+
+      <label className="ranking-search">
+        <Search size={18} />
+        <input
+          type="search"
+          placeholder="Buscar jugador"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
 
       {scores.length > 0 ? (
-      <ol style={{ padding: 0, listStyle: 'none', margin: 0 }}>
-  {visibleScores.map((entry, index) => (
-    <li 
-      key={`${entry.name}-${entry.date}-${index}`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '12px',
-        padding: '8px 4px'
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ minWidth: '20px', fontWeight: 'bold' }}>{index + 1}</span>
-        <span style={{ margin: 0 }}>{entry.name || 'Jugador'}</span>
-      </div>
-      <strong style={{ marginLeft: 'auto' }}>{entry.score} pts</strong>
-    </li>
-  ))}
-</ol>
+        <ol className="ranking-list">
+          {scores.map((entry, index) => (
+            <li key={`${entry.name}-${entry.date}`}>
+              <span className="ranking-position">{getPosition(index)}</span>
+              <div className="ranking-player">
+                <strong>{entry.name || 'Jugador'}</strong>
+                <span>
+                  Nivel {entry.level || 1} | {entry.fruitsSliced || 0} frutas | {entry.bombsHit || 0} bombas | {formatDate(entry.date)}
+                </span>
+              </div>
+              <strong className="ranking-score">{entry.score} pts</strong>
+            </li>
+          ))}
+        </ol>
       ) : (
-        <p className="ranking-empty">Sin puntajes todavía</p>
+        <p className="ranking-empty">Sin jugadores todavía</p>
       )}
 
-      {canToggle && (
-        <button className="toggle-ranking-button" type="button" onClick={() => setExpanded((current) => !current)}>
-          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          {expanded ? 'Mostrar menos' : `Ver todos (${scores.length})`}
-        </button>
+      {stats && (
+        <div className="ranking-stats">
+          <span>Partidas: {stats.gamesPlayed}</span>
+          <span>Frutas: {stats.fruitsSliced}</span>
+          <span>Bombas: {stats.bombsHit}</span>
+          <span>Nivel max: {stats.maxLevelReached}</span>
+        </div>
       )}
 
       <button
         className="clear-ranking-button"
         type="button"
-        onClick={() => onClear?.(activeMode)}
-        disabled={scores.length === 0}
+        onClick={() => onClear?.()}
+        disabled={rankings.length === 0}
       >
         <Trash2 size={18} />
-        Vaciar ranking
+        Borrar Ranking
       </button>
     </section>
   );

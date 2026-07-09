@@ -1,6 +1,6 @@
-import { Home, Pause, Play } from 'lucide-react';
+import { Home, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 
-export default function GameControls({ paused, onPauseToggle, onHome }) {
+export default function GameControls({ paused, soundEnabled, onPauseToggle, onSoundToggle, onHome }) {
   return (
     <div className="game-controls" aria-label="Controles del juego">
       <button
@@ -20,6 +20,15 @@ export default function GameControls({ paused, onPauseToggle, onHome }) {
         aria-label="Volver al inicio"
       >
         <Home size={22} />
+      </button>
+      <button
+        className="icon-button"
+        type="button"
+        onClick={onSoundToggle}
+        title={soundEnabled ? 'Desactivar sonido' : 'Activar sonido'}
+        aria-label={soundEnabled ? 'Desactivar sonido' : 'Activar sonido'}
+      >
+        {soundEnabled ? <Volume2 size={22} /> : <VolumeX size={22} />}
       </button>
     </div>
   );

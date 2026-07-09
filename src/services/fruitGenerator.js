@@ -96,9 +96,15 @@ export function createFruit(width, height, levelConfig) {
   const isBomb = Math.random() < (levelConfig?.bombChance ?? 0.16);
   const radius = isBomb ? 36 : 38 + Math.random() * 18;
   const edgePadding = radius + 24;
-  const x = edgePadding + Math.random() * Math.max(10, width - edgePadding * 2);
-  const velocityX = (Math.random() - 0.5) * 3.8 * speed;
-  const velocityY = -(11 + Math.random() * 5.5) * speed;
+  const fromSide = Math.random() < Math.min(0.34, 0.1 + (levelConfig?.level || 1) * 0.024);
+  const x = fromSide
+    ? (Math.random() < 0.5 ? -edgePadding : width + edgePadding)
+    : edgePadding + Math.random() * Math.max(10, width - edgePadding * 2);
+  const targetX = edgePadding + Math.random() * Math.max(10, width - edgePadding * 2);
+  const velocityX = fromSide
+    ? (targetX - x) / (85 + Math.random() * 36) * speed
+    : (Math.random() - 0.5) * 4.4 * speed;
+  const velocityY = -(10.5 + Math.random() * 6.2) * speed;
 
   if (isBomb) {
     return {
@@ -132,5 +138,5 @@ export function createFruit(width, height, levelConfig) {
 
 export function shouldSpawnFruit(lastSpawnTime, now, levelConfig) {
   const baseDelay = levelConfig?.spawnDelay ?? 850;
-  return now - lastSpawnTime > baseDelay + Math.random() * 90;
+  return now - lastSpawnTime > baseDelay + Math.random() * 70;
 }
