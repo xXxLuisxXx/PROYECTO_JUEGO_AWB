@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { segmentIntersectsCircle } from '../services/collision.js';
 import { playSound } from '../services/audio.js';
-import { createFruit, FRUIT_TYPES, shouldSpawnFruit } from '../services/fruitGenerator.js';
+import { createFruit, FRUIT_TYPES, getSpawnDelay } from '../services/fruitGenerator.js';
 import { getLevelConfig, MAX_LEVEL } from '../services/levels.js';
+import { isMobileDevice } from '../utils/device.js';
 import {
   createSwordState,
   drawSword,
@@ -23,9 +24,16 @@ const fruitSpriteCache = new Map();
 
 function resizeCanvas(canvas) {
   const rect = canvas.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.2);
-  canvas.width = Math.floor(rect.width * dpr);
-  canvas.height = Math.floor(rect.height * dpr);
+  const dprLimit = isMobileDevice() ? 1.1 : 1.35;
+  const dpr = Math.min(window.devicePixelRatio || 1, dprLimit);
+  const pixelWidth = Math.max(1, Math.floor(rect.width * dpr));
+  const pixelHeight = Math.max(1, Math.floor(rect.height * dpr));
+
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
+
   const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return { width: rect.width, height: rect.height };
@@ -805,20 +813,22 @@ export default function GameCanvas({
   const weaponRef = useRef(getWeaponLoadout(weaponSkin));
   const energyRef = useRef(getEnergyTheme(energyTheme));
   const inputReadyRef = useRef(isInputReady);
+  const inputStatusRef = useRef(inputStatus);
   const inputModeRef = useRef(inputMode);
   const pausedRef = useRef(paused);
-  const lastSpawnRef = useRef(0);
+  const nextSpawnAtRef = useRef(0);
   const lastSliceTimeRef = useRef(0);
   const comboRef = useRef(0);
   const maxComboRef = useRef(0);
   const bombsHitRef = useRef(0);
-  const slowMotionRef = useRef(0);
+  const reducedEffectsRef = useRef(isMobileDevice());
   const shakeRef = useRef(0);
   const scoreRef = useRef(0);
   const lostLivesRef = useRef(0);
   const levelRef = useRef(startLevel);
   const levelFruitCountRef = useRef(0);
   const totalFruitCountRef = useRef(0);
+  const elapsedMsRef = useRef(0);
   const levelMessageRef = useRef(null);
   const fpsRef = useRef({ frames: 0, lastTime: performance.now(), value: 0 });
   const callbacksRef = useRef({ onScore, onLoseLife, onGameOver, onLevelStats, onVictory, onRecoverLife });
@@ -830,6 +840,10 @@ export default function GameCanvas({
   useEffect(() => {
     inputReadyRef.current = isInputReady;
   }, [isInputReady]);
+
+  useEffect(() => {
+    inputStatusRef.current = inputStatus;
+  }, [inputStatus]);
 
   useEffect(() => {
     inputModeRef.current = inputMode;
@@ -871,7 +885,11 @@ export default function GameCanvas({
 
     handleResize();
     window.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('resize', handleResize);
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(handleResize);
+    resizeObserver?.observe(canvas);
     const initialLevelConfig = getLevelConfig(startLevel);
+    nextSpawnAtRef.current = performance.now() + Math.min(500, getSpawnDelay(initialLevelConfig) * 0.5);
     callbacksRef.current.onLevelStats({
       level: startLevel,
       target: initialLevelConfig.target,
@@ -881,6 +899,7 @@ export default function GameCanvas({
         combo: 0,
         multiplier: 1,
         bombsHit: 0,
+        elapsedMs: 0,
       });
 
     function updateFps(now) {
@@ -906,6 +925,7 @@ export default function GameCanvas({
         combo: comboRef.current,
         multiplier: Math.min(5, Math.max(1, Math.floor(comboRef.current / 2) + 1)),
         bombsHit: bombsHitRef.current,
+        elapsedMs: elapsedMsRef.current,
       });
     }
 
@@ -915,6 +935,7 @@ export default function GameCanvas({
         fruitsSliced: totalFruitCountRef.current,
         bombsHit: bombsHitRef.current,
         maxCombo: maxComboRef.current,
+        elapsedMs: elapsedMsRef.current,
       };
     }
 
@@ -937,6 +958,7 @@ export default function GameCanvas({
       levelRef.current += 1;
       levelFruitCountRef.current = 0;
       fruitsRef.current = [];
+      nextSpawnAtRef.current = 0;
       levelMessageRef.current = {
         text: 'LEVEL COMPLETE',
         level: levelRef.current,
@@ -951,8 +973,8 @@ export default function GameCanvas({
         return;
       }
 
-      const slowMotion = slowMotionRef.current > now ? 0.48 : 1;
-      const delta = (Math.min(32, now - lastTime) / 16.67) * slowMotion;
+      const frameElapsedMs = Math.max(0, now - lastTime);
+      const delta = Math.min(32, frameElapsedMs) / 16.67;
       lastTime = now;
       const fpsChanged = updateFps(now);
 
@@ -1002,21 +1024,27 @@ export default function GameCanvas({
         ctx.fillStyle = '#ffffff';
         ctx.font = '700 22px Inter, system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText(inputStatus, width / 2, height / 2);
+        ctx.font = `700 ${Math.max(16, Math.min(22, width * 0.05))}px Inter, system-ui`;
+        ctx.fillText(inputStatusRef.current, width / 2, height / 2);
         ctx.restore();
         animationRef.current = requestAnimationFrame(loop);
         return;
       }
 
       const levelMessageActive = levelMessageRef.current && now < levelMessageRef.current.until;
+      elapsedMsRef.current += Math.min(frameElapsedMs, 100);
+
+      if (!nextSpawnAtRef.current) {
+        nextSpawnAtRef.current = now + getSpawnDelay(levelConfig);
+      }
 
       if (
         !levelMessageActive
         && fruitsRef.current.length < levelConfig.maxActiveFruits
-        && shouldSpawnFruit(lastSpawnRef.current, now, levelConfig)
+        && now >= nextSpawnAtRef.current
       ) {
         fruitsRef.current.push(createFruit(width, height, levelConfig));
-        lastSpawnRef.current = now;
+        nextSpawnAtRef.current = now + getSpawnDelay(levelConfig);
       }
 
       const activePoint = inputModeRef.current === 'mouse' ? mousePointRef.current : inputPointRef.current;
@@ -1062,8 +1090,8 @@ export default function GameCanvas({
             shakeRef.current = Math.max(shakeRef.current, 16);
             impactRingsRef.current.push(createImpactRing(fruit.x, fruit.y, '#ff6537', true));
             floatingTextsRef.current.push(createFloatingText(fruit.x, fruit.y - 18, '- VIDA', '#ff6537'));
-            particlesRef.current.push(...createParticles(fruit.x, fruit.y, '#ff6537', 28, true));
-            particlesRef.current.push(...createElectricParticles(fruit.x, fruit.y, 18, true));
+            particlesRef.current.push(...createParticles(fruit.x, fruit.y, '#ff6537', reducedEffectsRef.current ? 18 : 28, true));
+            particlesRef.current.push(...createElectricParticles(fruit.x, fruit.y, reducedEffectsRef.current ? 12 : 18, true));
             publishStats();
             if (lostLivesRef.current >= 3) {
               playSound('gameover');
@@ -1084,9 +1112,6 @@ export default function GameCanvas({
             totalFruitCountRef.current += 1;
             callbacksRef.current.onScore(earnedPoints);
             playSound(comboRef.current >= 3 ? 'combo' : 'slice');
-            if (comboRef.current >= 5) {
-              slowMotionRef.current = now + 420;
-            }
             shakeRef.current = Math.max(shakeRef.current, comboRef.current >= 3 ? 9 : 4);
             halvesRef.current.push(...createHalves(fruit));
             impactRingsRef.current.push(createImpactRing(fruit.x, fruit.y, energy.color, comboRef.current >= 5));
@@ -1104,8 +1129,14 @@ export default function GameCanvas({
                       : `+${earnedPoints}`,
               comboRef.current >= 3 ? '#79f2ff' : '#ffffff',
             ));
-            particlesRef.current.push(...createParticles(fruit.x, fruit.y, fruitConfig.splash, comboRef.current >= 3 ? 18 : 12));
-            particlesRef.current.push(...createElectricParticles(fruit.x, fruit.y, comboRef.current >= 5 ? 34 : 18, comboRef.current >= 5));
+            const splashAmount = reducedEffectsRef.current
+              ? (comboRef.current >= 3 ? 12 : 9)
+              : (comboRef.current >= 3 ? 18 : 12);
+            const electricAmount = reducedEffectsRef.current
+              ? (comboRef.current >= 5 ? 20 : 12)
+              : (comboRef.current >= 5 ? 34 : 18);
+            particlesRef.current.push(...createParticles(fruit.x, fruit.y, fruitConfig.splash, splashAmount));
+            particlesRef.current.push(...createElectricParticles(fruit.x, fruit.y, electricAmount, comboRef.current >= 5));
             publishStats();
 
             if (levelFruitCountRef.current >= levelConfig.target) {
@@ -1192,7 +1223,7 @@ export default function GameCanvas({
         ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
         ctx.fillRect(0, height * 0.38, width, 126);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 42px Inter, system-ui';
+        ctx.font = `900 ${Math.max(28, Math.min(42, width * 0.09))}px Inter, system-ui`;
         ctx.fillText(levelMessageRef.current.text, width / 2, height * 0.45);
         ctx.fillStyle = '#79f2ff';
         ctx.font = '800 28px Inter, system-ui';
@@ -1213,6 +1244,8 @@ export default function GameCanvas({
       stopped = true;
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
       fruitsRef.current = [];
       halvesRef.current = [];
       particlesRef.current = [];
@@ -1226,14 +1259,15 @@ export default function GameCanvas({
       comboRef.current = 0;
       maxComboRef.current = 0;
       bombsHitRef.current = 0;
-      slowMotionRef.current = 0;
       lastSliceTimeRef.current = 0;
       shakeRef.current = 0;
       levelRef.current = startLevel;
       levelFruitCountRef.current = 0;
       totalFruitCountRef.current = 0;
+      elapsedMsRef.current = 0;
+      nextSpawnAtRef.current = 0;
     };
-  }, [handleResize, inputPointRef, inputStatus, startLevel]);
+  }, [handleResize, inputPointRef, startLevel]);
 
   const handlePointerMove = useCallback((event) => {
     if (inputMode !== 'mouse') {

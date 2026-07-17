@@ -25,9 +25,9 @@ export function segmentIntersectsCircle(segmentStart, segmentEnd, circle) {
   }
 
   const movement = Math.hypot(segmentEnd.x - segmentStart.x, segmentEnd.y - segmentStart.y);
-  if (movement < 8) {
+  if (movement < 4) {
     return false;
   }
 
-  return distancePointToSegment(circle, segmentStart, segmentEnd) <= circle.radius + 10;
+  return distancePointToSegment(circle, segmentStart, segmentEnd) <= circle.radius + 12;
 }

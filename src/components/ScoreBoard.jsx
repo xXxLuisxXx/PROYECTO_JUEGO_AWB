@@ -1,4 +1,11 @@
-import { Heart, Trophy } from 'lucide-react';
+import { Clock3, Heart, Trophy } from 'lucide-react';
+
+function formatElapsedTime(elapsedMs = 0) {
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
 
 export default function ScoreBoard({ score, lives, record, levelStats, playerName }) {
   return (
@@ -20,9 +27,15 @@ export default function ScoreBoard({ score, lives, record, levelStats, playerNam
         </strong>
       </div>
 
-      <div className="score-item">
+      <div className="score-item points-item">
         <span>PUNTOS</span>
         <strong>{String(score).padStart(4, '0')}</strong>
+      </div>
+
+      <div className="score-item timer-item">
+        <Clock3 size={18} aria-hidden="true" />
+        <span>TIEMPO</span>
+        <strong>{formatElapsedTime(levelStats.elapsedMs)}</strong>
       </div>
 
       <div className="life-row" aria-label={`${lives} vidas restantes`}>

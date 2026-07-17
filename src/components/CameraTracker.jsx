@@ -6,6 +6,9 @@ export default function CameraTracker({ videoRef, active }) {
       playsInline
       muted
       autoPlay
+      controls={false}
+      disablePictureInPicture
+      aria-hidden="true"
     />
   );
 }

@@ -9,7 +9,7 @@ export const WEAPON_LOADOUTS = {
     aspectRatio: 5.2,
     drawOffset: 0.5,
     trailLength: 18,
-    smoothing: 0.78,
+    smoothing: 0.92,
     power: 1.08,
   },
 };

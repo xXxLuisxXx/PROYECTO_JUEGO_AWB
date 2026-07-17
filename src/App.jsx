@@ -84,7 +84,7 @@ export default function App() {
   const videoRef = useRef(null);
   const endedRef = useRef(false);
   const gameStartedAtRef = useRef(0);
-  const runStatsRef = useRef({ level: 1, fruitsSliced: 0, bombsHit: 0 });
+  const runStatsRef = useRef({ level: 1, fruitsSliced: 0, bombsHit: 0, elapsedMs: 0 });
   const [status, setStatus] = useState('start');
   const [inputMode, setInputMode] = useState('camera');
   const [playerName, setPlayerName] = useState(() => localStorage.getItem(PLAYER_KEY) || '');
@@ -104,6 +104,7 @@ export default function App() {
     fps: 0,
     combo: 0,
     multiplier: 1,
+    elapsedMs: 0,
   });
 
   const isPlaying = status === 'playing';
@@ -111,7 +112,7 @@ export default function App() {
   const isGameActive = isPlaying || isPaused;
   const usesCamera = inputMode === 'camera';
 
-  const { handPointRef, isCameraReady, hasSeenHand, isHandVisible, error } = useHandTracking(
+  const { handPointRef, isCameraReady, hasSeenHand, isHandVisible, error, retryCamera } = useHandTracking(
     videoRef,
     usesCamera && isPlaying,
   );
@@ -123,7 +124,7 @@ export default function App() {
 
     endedRef.current = false;
     gameStartedAtRef.current = performance.now();
-    runStatsRef.current = { level: nextStartLevel, fruitsSliced: 0, bombsHit: 0 };
+    runStatsRef.current = { level: nextStartLevel, fruitsSliced: 0, bombsHit: 0, elapsedMs: 0 };
     setPlayerName(normalizePlayerName(nextPlayerName));
     localStorage.setItem(PLAYER_KEY, normalizePlayerName(nextPlayerName));
     setStartLevel(nextStartLevel);
@@ -138,6 +139,7 @@ export default function App() {
       fps: 0,
       combo: 0,
       multiplier: 1,
+      elapsedMs: 0,
     });
     setStatus('playing');
   }, [playerName, startLevel]);
@@ -201,7 +203,8 @@ export default function App() {
   }, []);
 
   const persistStats = useCallback((finalStats = runStatsRef.current) => {
-    const elapsed = gameStartedAtRef.current ? performance.now() - gameStartedAtRef.current : 0;
+    const elapsed = finalStats.elapsedMs
+      ?? (gameStartedAtRef.current ? performance.now() - gameStartedAtRef.current : 0);
     setStats((currentStats) => {
       const nextStats = {
         ...currentStats,
@@ -257,6 +260,7 @@ export default function App() {
       level: nextStats.level,
       fruitsSliced: nextStats.totalFruits,
       bombsHit: nextStats.bombsHit || runStatsRef.current.bombsHit,
+      elapsedMs: nextStats.elapsedMs || runStatsRef.current.elapsedMs,
     };
   }, []);
 
@@ -330,14 +334,23 @@ export default function App() {
             onHome={goHome}
           />
 
+          {usesCamera && (
+            <div className={`camera-status ${isHandVisible ? 'camera-status-ready' : ''}`} role="status">
+              <span aria-hidden="true" />
+              {isHandVisible ? 'Mano detectada' : isCameraReady ? 'Buscando mano' : 'Iniciando cámara'}
+            </div>
+          )}
+
           <GameCanvas
             inputPointRef={handPointRef}
             inputMode={inputMode}
             isInputReady={!usesCamera || (isCameraReady && hasSeenHand)}
             inputStatus={
-              usesCamera && isCameraReady && !isHandVisible
-                ? 'Pon tu mano frente a la cámara'
-                : 'Activando cámara...'
+              error
+                ? 'Cámara no disponible'
+                : usesCamera && isCameraReady && !isHandVisible
+                  ? 'Pon tu mano frente a la cámara'
+                  : 'Activando cámara...'
             }
             lives={lives}
             startLevel={startLevel}
@@ -382,9 +395,10 @@ export default function App() {
         />
       )}
 
-      {usesCamera && error && (
+      {usesCamera && isGameActive && error && (
         <div className="camera-error" role="alert">
-          {error}
+          <span>{error}</span>
+          <button type="button" onClick={retryCamera}>Reintentar</button>
         </div>
       )}
     </main>

@@ -140,3 +140,7 @@ export function shouldSpawnFruit(lastSpawnTime, now, levelConfig) {
   const baseDelay = levelConfig?.spawnDelay ?? 850;
   return now - lastSpawnTime > baseDelay + Math.random() * 70;
 }
+
+export function getSpawnDelay(levelConfig) {
+  return (levelConfig?.spawnDelay ?? 850) + Math.random() * 70;
+}

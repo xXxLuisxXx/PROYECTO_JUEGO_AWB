@@ -66,7 +66,7 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
                 onClick={() => onModeChange('mouse')}
               >
                 <MousePointer2 size={18} />
-                Mouse
+                Táctil / mouse
               </button>
             </div>
 
@@ -112,7 +112,6 @@ export default function StartScreen({ inputMode, onModeChange, onStart, rankings
           <RankingBoard rankings={rankings} stats={stats} onClear={onClearRanking} />
         )}
 
-        {view === 'play' && <RankingBoard rankings={rankings} stats={stats} onClear={onClearRanking} />}
       </div>
     </section>
   );
